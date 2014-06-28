@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-header">Register Application</h1>
+
+<div id="reg-app-intro" class="alert alert-info alert-dismissable message">
+  <button type="button" class="close closer" data-dismiss="alert" aria-hidden="true">&times;</button>
+  If you want to call the dataset APIs you must register an application. This will allow you to authenticate using
+  the OAUTH2 protocol. Please take care to check your redirect/callback URI. That URI will have to match the one you
+  provide in your OAUTH2 calls or the request will be denied.
+  <div class="buttons">
+    <button type="button" data-dismiss="alert" class="btn btn-info closer">OK got it!</button>
+  </div>
+</div>
+
+
+<form role="form" id="application" class="dropzone" method="POST" action="/oauth/client/new" enctype="multipart/form-data">
+    <input name=_csrf_token type=hidden value="{{ csrf_token() }}">
+    <div class="row">
+        <div class="form-group col-md-8">
+            <div id="name" class="form-group">
+                <label for="name_input">Name</label>
+                <input type="text" id="name_input" class="form-control" name="name"/>
+                {% if name_error %}
+                <p class="help-block">{{name_error}}</p>
+                {% else %}
+                <p class="help-block form-field-description">Choose a descriptive and trustworthy name.</p>
+                {% endif %}
+            </div>
+            <div id="description" class="form-group">
+                <label for="description_input">Description</label>
+                <textarea id="description_input" class="form-control" rows="6" name="description"></textarea>
+                {% if description_error %}
+                <p class="help-block">{{description_error}}</p>
+                {% else %}
+                <p class="help-block form-field-description">Optionally include a description to be shown to users.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="form-group col-md-4">
+            <label for="file_input">Icon</label>
+            <div class="well text-center">
+                <div id="image-preview"></div>
+                <div class="dropzone-previews dz-clickable dz-error" id="thedropzone">
+                    <div class="dz-default dz-message" data-dz-message="">
+                        <h4>Drag & Drop</h4>
+                        <span class="glyphicon glyphicon-upload glyphicon-large"></span>
+                        <p class="text-small">... or click here to upload</p>
+                    </div>
+                </div>
+            </div>
+            {% if file_error %}
+            <p class="help-block">{{ file_error }}</p>
+            {% elif not icon %}
+            <p class="help-block form-field-description">A nice image helps users trust your application.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div id="redirect_uris" class="form-group">
+        <label for="redirect_uris_input">Callback URL</label>
+        <input type="text" id="redirect_uris_input" class="form-control" name="redirect_uris"/>
+        {% if redirect_uris_error %}
+        <p class="help-block">{{redirect_uris_error}}</p>
+        {% else %}
+        <p class="help-block form-field-description">The OAUTH2 redirect (aka callback) URI of your application.</p>
+        {% endif %}
+    </div>
+    <div class="form-group">
+        <div class="radio">
+            <label>
+                <input type="radio" id="client_type_confidential" name="client_type" value="confidential"/> Confidential client
+            </label>
+        </div>
+        <div class="radio">
+            <label>
+                <input type="radio" id="client_type_public" checked="checked" aria-checked="true" name="client_type" value="public"/> Public client
+            </label>
+        </div>
+        <p id="confidential_type_warning" class="text-danger">Only select confidential client type if you are writing a web application.</p>
+    </div>
+
+    <div class="btn-toolbar buttons" role="toolbar">
+        <button type="submit" class="btn btn-success">Register</button>
+        <a href="/oauth/clients" class="btn btn-warning">Cancel</a>
+   </div>
+</form>
+
+{% endblock %}
+{% block js %}
+Dropzone.autoDiscover = false;
+
+$(function() {
+
+    $('#application').dropzone({
+      autoProcessQueue: false,
+      autoDiscover: false,
+      uploadMultiple: false,
+      parallelUploads: 1,
+      maxFiles: 1,
+      clickable: true,
+      previewsContainer: '#image-preview',
+      previewTemplate: '<div id="dz-preview-template" class="dz-preview dz-file-preview"><img class="img-thumbnail img-rounded" data-dz-thumbnail /></div>',
+
+
+      // The setting up of the dropzone
+      init: function() {
+        var myDropzone = this;
+
+        // First change the button to actually tell Dropzone to process the queue.
+        this.element.querySelector("button[type=submit]").addEventListener("click", function(e) {
+          // Make sure that the form isn't actually being sent.
+          e.preventDefault();
+          e.stopPropagation();
+          myDropzone.processQueue();
+          myDropzone.element.submit();
+        });
+
+        myDropzone.addEventListener('addedfile',function(e) {
+            $('#thedropzone').hide();
+        });
+
+        // Listen to the sendingmultiple event. In this case, it's the sendingmultiple event instead
+        // of the sending event because uploadMultiple is set to true.
+        this.on("sendingmultiple", function() {
+          // Gets triggered when the form is actually being sent.
+          // Hide the success button or the complete form.
+        });
+        this.on("successmultiple", function(files, response) {
+          // Gets triggered when the files have successfully been sent.
+          // Redirect user or notify of success.
+        });
+        this.on("errormultiple", function(files, response) {
+          // Gets triggered when there was an error sending the files.
+          // Maybe show form again, and notify user of error
+        });
+      }
+    });
+
+    $('#confidential_type_warning').hide();
+    $('#client_type_confidential').click(function() {
+        if ( $(this).is(':checked') ) {
+            $('#confidential_type_warning').show();
+        }
+    });
+    $('#client_type_public').click(function() {
+        if ( $(this).is(':checked') ) {
+            $('#confidential_type_warning').hide();
+        }
+    });
+
+});
+
+{% endblock %}

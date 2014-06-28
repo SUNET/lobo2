@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-header" xmlns="http://www.w3.org/1999/html">My Tokens</h1>
+
+<div id="token-intro" class="alert alert-info alert-dismissable message">
+  <button type="button" class="close closer" data-dismiss="alert" aria-hidden="true">&times;</button>
+  An access token is a personal password that you can use to give limited access to your account
+  from a simple application like a commandline script. All access tokens are really OAUTH tokens.
+  <div role="toolbar" class="buttons">
+    <button type="button" data-dismiss="alert" class="btn btn-info closer">OK got it!</button>
+  </div>
+</div>
+
+<div class="btn-toolbar buttons" role="toolbar">
+    <a href="/oauth/token/new" class="btn btn-success">New Access Token</a>
+</div>
+
+{% if tokens %}
+    {% for token in tokens %}
+    <div class="panel panel-default">
+        <div class="panel-heading">{{ token.client.name }}
+            <a role="button" class="btn btn-danger btn-xs pull-right" data-toggle="modal" data-target="#confirm-delete" href="#" data-href="/oauth/token/{{ token.token_id }}/remove">Remove token</a></li>
+        </div>
+        <div class="panel-body">
+            <dl class="dl-horizontal">
+                <dt>scopes</dt>
+                <dd>{{ token.scopes|join(" ") }}</dd>
+                {% if token.expires %}
+                <dt>expires</dt>
+                <dd>{{ token.expires }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<div class="modal fade" id="confirm-delete" role="dialog" aria-labelledby="confirm-delete" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="confirm-delete">Confirm Delete</h4>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanentely delete this token? Any application using this token will stop working!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <a href="#" class="btn btn-danger danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block js %}
+$(function() {
+
+    $('#confirm-delete').on('show.bs.modal', function(e) {
+        $(this).find('.danger').attr('href', $(e.relatedTarget).data('href'));
+    });
+
+});
+{% endblock %}

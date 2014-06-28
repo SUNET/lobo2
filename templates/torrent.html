@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if session is authenticated %}
+<div class="btn-toolbar buttons" role="toolbar">
+    {% if info_hash is permission 'd' %}
+    <a role="button" class="btn btn-danger pull-right" data-toggle="modal" data-target="#confirm-delete" href="#" data-href="/dataset/{{ info_hash }}/delete">Delete Dataset</a>
+    {% endif %}
+    {% if info_hash is permission 'a' %}
+    <button class="btn btn-warning" data-toggle="modal" data-target="#permissions">Modify Permissions</button>
+    {% endif %}
+</div>
+{% endif %}
+
+<table class="table table-bordered">
+    <tr><th>User</th><td>{{ user }}</td></tr>
+    <tr><th>Creation Date</th><td>{{ creation_time | strftime }}</td></tr>
+    <tr><th>Torrent Metadata</th><td><a href="/api/dataset/{{ info_hash }}.torrent">{{ info_hash }}</a></td></tr>
+    {%  if description %}
+    <tr><th>Description</th><td>{{ description }}</td></tr>
+    {%  endif %}
+    <tr><th>Status</th><td id="scrape"></td></tr>
+    <tr><th>Files</th><td>
+        <ul class="list-unstyled">
+        {% for f in info['files'] %}
+            <li>{{  f.get('path',[]) | path_to_file }} ({{ f.get('length','NaN') }} bytes)</li>
+        {% endfor %}
+        </ul>
+    </td></tr>
+</table>
+
+<div class="modal fade" id="permissions" tabindex="-1" role="dialog" aria-labelledby="permissions" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="permissions">Modify Permissons</h4>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered table-striped">
+            <tr id="permissions-header"><th>User</th><th>Permisson</th><th></th></tr>
+            <form>
+                <tr>
+                    <td><input type="text" name="user" id="perm_user"/></td>
+                    <td>
+                        <label><input type="checkbox" name="perm" id="perm_w" value="w"/> write</label>
+                        <label><input type="checkbox" name="perm" id="perm_d" value="d"/> delete</label>
+                        <label><input type="checkbox" name="perm" id="perm_a" value="a"/> admin</label>
+                    </td>
+                    <td><button type="button" id="addperm" class="btn btn-xs btn-success">Add Permisson</button></td>
+                </tr>
+            </form>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="confirm-delete" tabindex="-2" role="dialog" aria-labelledby="confirm-delete" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="confirm-delete">Confirm Delete</h4>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Are you sure you want to permanentely delete this dataset?
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <a href="#" class="btn btn-danger danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block js %}
+$(function() {
+
+    $('#scrape').each(function() {
+        var self = $(this);
+        $.getJSON("/scrape/{{ info_hash }}",function(data) {
+            self.text(data['complete']+"/"+data['incomplete']+" (completed/downloading)");
+            if (data['complete'] < 2) { $('#scrape').addClass("danger") }
+            else if (data['complete'] < 3) { $('#scrape').addClass("warning") }
+            else if (data['complete'] > 5) { $('#scrape').addClass("success") }
+        });
+    });
+
+    $('#permissions').on('click','.remove-perm',function(e) {
+        var perm = $(this).attr('data');
+        $.getJSON("/dataset/{{ info_hash }}/permission/remove/"+perm,update);
+    });
+
+    function update(data) {
+        console.log(data);
+        var plist = $('#permissions-header');
+        $('.permission').remove();
+        $.each(data,function(idx, perm) {
+            plist.after($('<tr>').addClass("permission").append($('<td>').text(perm[1])).append($('<td>').text(perm[2])).append($('<td>').append($('<button>').addClass('btn').addClass('btn-xs').addClass('btn-danger').addClass('remove-perm').attr('role','button').attr('data','user:'+perm[1]+':'+perm[2]).text('Delete'))));
+        });
+    }
+
+    function reload(e) {
+        $.getJSON("/dataset/{{ info_hash }}/permissions",update);
+    }
+
+    $('#addperm').click(function(e) {
+        var user = $('#perm_user').val();
+        if (user) {
+            console.log(user);
+            perms = []
+            if ($('#perm_r').is(':checked')) {
+                perms.push("user:"+user+":r")
+            }
+            if ($('#perm_w').is(':checked')) {
+                perms.push("user:"+user+":w")
+            }
+            if ($('#perm_d').is(':checked')) {
+                perms.push("user:"+user+":d")
+            }
+            if ($('#perm_a').is(':checked')) {
+                perms.push("user:"+user+":a")
+            }
+            console.log(perms);
+            $.getJSON("/dataset/{{ info_hash }}/permission/add/"+perms.join('+'),update);
+        }
+    });
+
+    $('#permissions').on('shown.bs.modal',reload);
+
+    $('#confirm-delete').on('show.bs.modal', function(e) {
+        $(this).find('.danger').attr('href', $(e.relatedTarget).data('href'));
+    });
+
+});
+{% endblock %}

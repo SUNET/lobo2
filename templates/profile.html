@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+
+    <h1 class="page-header">{{ session.user }}</h1>
+
+    <div class="buttons" role="toolbar">
+        <a href="/oauth/clients" role="button" class="btn btn-default">My Registered Applications</a>
+        <a href="/oauth/tokens" role="button" class="btn btn-default">My Access Tokens</a>
+    </div>
+
+{% endblock %}

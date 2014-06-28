@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <p class="lead">
+    <img class="img-responsive img-rounded" src="data:image/png;base64,{{ client.icon }}"/>
+      An application wants access to your identity: {{ client.name }}
+  </p>
+  {%  if client.description %}
+  <p class="bg-info">{{ client.description }}</p>
+  {% endif %}
+  <form role="form" action="/oauth/authorize" method="POST">
+    <p>Allow access?</p>
+    <input type="hidden" name="client_id" value="{{ client.client_id }}">
+    <input type="hidden" name="scope" value="{{ scopes|join(' ') }}">
+    <input type="hidden" name="response_type" value="{{ response_type }}">
+    {% if state %}
+    <input type="hidden" name="state" value="{{ state }}">
+    {% endif %}
+    <input class="btn btn-success" type="submit" name="confirm" value="yes">
+    <input class="btn btn-warning" type="submit" name="confirm" value="no">
+  </form>
+{% endblock %}

@@ -1,0 +1,94 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    {% block head %}
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css"/>
+    <link href="/static/style.css" rel="stylesheet"/>
+    <title>{% block title %}SUNET Datasets{% endblock %}</title>
+    {% endblock %}
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <ul class="nav nav-pills pull-right">
+            <li><a href="/">Home</a></li>
+            {% if session is authenticated %}
+            <li><a href="/dataset/new">New Dataset</a></li>
+            {% endif %}
+            <li><a href="/datasets">List Datasets</a></li>
+            <li><a href="/about">About</a></li>
+            {% if session is authenticated %}
+            <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown">{{ session['user'] }}<span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="/me">Profile</a></li>
+                    <li class="divider"></li>
+                    <li><a href="/logout">Logout</a></li>
+                </ul>
+            </li>
+            {% else %}
+            <li><a class="btn btn-success" role="button" href="/login">Login</a></li>
+            {% endif %}
+        </ul>
+        <h3 class="text-muted">SUNET Datasets</h3>
+    </div>
+    <div id="content">{% block content %}{% endblock %}</div>
+    <div class="footer">
+        <div class="row">
+            <div class="col-md-4">
+                <ul class="list-unstyled">
+                    <li><a href="/docs/api">API documentation</a></li>
+                    <li><a href="/docs/api">Tracker documentation</a></li>
+                    {% if session is authenticated %}
+                    <li><a href="/oauth/clients">Applications</a></li>
+                    <li><a href="/oauth/tokens">Access Tokens</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <ul class="list-unstyled">
+                    <li><a href="/about">About SUNET Datasets</a></li>
+                    <li><a href="http://www.sunet.se">SUNET</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <ul class="list-unstyled">
+                    {% if session is authenticated %}
+                    <li><a href="/me">Signed in as {{ session['user'] }}</a></li>
+                    <li><a href="/me">My Profile</a></li>
+                    <li><a href="/logout">Logout</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </ul>
+    </div>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.0/jquery.min.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="/static/dropzone.js"></script>
+    <script src="/static/jstorage.js"></script>
+    <script>
+        $(function() {
+           $('button.closer').on('click',function(e) {
+                var closed = $.jStorage.get('lobo2.closed.messages',{});
+                $(this).closest('div.message').each(function(idx, elt) {
+                    $(elt).hide();
+                    closed[$(elt).attr('id')] = true;
+                });
+                $.jStorage.set('lobo2.closed.messages',closed);
+            });
+            $('div.message').each(function () {
+                var closed = $.jStorage.get('lobo2.closed.messages',{});
+                if (closed[$(this).attr('id')]) {
+                    $(this).hide();
+                }
+            });
+        });
+    </script>
+    <script>{% block js %}{% endblock %}</script>
+</div>
+</body>
+</html>

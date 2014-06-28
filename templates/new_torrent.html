@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-header">Add a Dataset</h1>
+
+<p>
+Add a dataset by uploading a bittorrent metadata file below. The tracker URL in the file must
+be <code>{{ tracker_url }}</code>.
+</p>
+
+<form role="form" method="POST" action="/dataset/new" enctype="multipart/form-data">
+   <input name=_csrf_token type=hidden value="{{ csrf_token() }}">
+   <div id="torrent" class="form-group">
+      <label for="torrent_input">Torrent Metadata</label>
+      <input type="file" id="torrent_input" class="form-control" name="torrent"/>
+      {% if torrent_error %}
+      <p class="help-block">{{torrent_error}}</p>
+      {% else %}
+      <p class="help-block form-field-description">Provide a bittorrent metadata file.</p>
+      {% endif %}
+   </div>
+   <div class="buttons">
+     <button type="submit" class="btn btn-success">Add Dataset</button>
+     <a href="/" class="btn btn-warning">Cancel</a>
+   </div>
+</form>
+
+{% endblock %}
+{% block js %}
+$(function() {
+
+    {% if torrent_error %}
+    $('#torrent').addClass('has-error');
+    {% endif %}
+
+});
+{% endblock %}

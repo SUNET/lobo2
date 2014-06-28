@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-header">
+    {% if title is defined -%}
+        {{title}}
+    {% else -%}
+        Documentation
+    {% endif -%}
+</h1>
+
+{% for doc in autodoc %}
+<div class="mapping">
+    <a id="rule-{{doc.rule|urlencode}}" href="#" class="rule"><h4>{{doc.rule|escape}}</h4></a>
+    <ul class="methods">
+        {% for method in doc.methods -%}
+        <li class="method">{{method}}</li>
+        {% endfor %}
+    </ul>
+    <ul class="arguments">
+        {% for arg in doc.args %}
+        <li>
+            <span class="argument">{{arg}}</span>
+            <span class="default">{{doc.defaults[arg]}}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    <p class="docstring">{{doc.docstring|urlize|safe}}</p>
+</div>
+{% endfor %}
+{% endblock %}

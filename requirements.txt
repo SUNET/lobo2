@@ -1,0 +1,7 @@
+flask
+redis
+babel
+Flask-Negotiate
+flask-autodoc
+flask-oauthlib
+pillow

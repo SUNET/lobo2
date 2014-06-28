@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-header">My Applications</h1>
+
+<div class="btn-toolbar buttons" role="toolbar">
+    <a href="/oauth/client/new" class="btn btn-success">Register Application</a>
+</div>
+
+{% for client in clients %}
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">{{ client.name }} <a role="button" class="btn btn-danger btn-xs pull-right" data-toggle="modal" data-target="#confirm-delete" href="#" data-href="/oauth/client/{{ client.client_id }}/remove">Remove Application</a>
+  </h3>
+  </div>
+  <div class="panel-body">
+    <dl class="dl-horizontal">
+        {% if client.icon %}
+        <dt>icon</dt>
+        <dd><img class="img-responsive img-rounded" src="data:image/png;base64,{{ client.icon }}"/></dd>
+        {% endif %}
+        <dt>client id</dt>
+        <dd>{{ client.client_id }}</dd>
+        <dt>client secret</dt>
+        <dd>{{ client.client_secret }}</dd>
+        <dt>client type</dt>
+        <dd>{{ client.client_type }}</dd>
+        {%  if client.description %}
+        <dt>description</dt>
+        <dd>{{ client.description }}</dd>
+        {% endif %}
+    </dl>
+    </div>
+</div>
+{%  else %}
+    <p>You have no registered applications. If you are a developer that wants to call the dataset API using
+        OAUTH2 you must <a href="/oauth/client/new">register an application</a>.</p>
+{% endfor %}
+
+<div class="modal fade" id="confirm-delete" role="dialog" aria-labelledby="confirm-delete" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="confirm-delete">Confirm Delete</h4>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanentely delete this application?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <a href="#" class="btn btn-danger danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block js %}
+$(function() {
+
+    $('#confirm-delete').on('show.bs.modal', function(e) {
+        $(this).find('.danger').attr('href', $(e.relatedTarget).data('href'));
+    });
+
+});
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-header">About SUNET datasets</h1>
+
+   <p>SUNET Datasets is an experimental service to provide a distribution infrastructure
+   for large datasets using bittorrent technology. In order to use this service you must
+   create a torrent metadata file (aka torrent file) and use a torrent software to
+   provide access to the data. No data is stored or served from this service.</p>
+
+    <h2>Creating a torrent (Linux/Unix)</h2>
+    <p>A simple way to create a torrent metadata file is to use
+        <a href="http://www.rahul.net/dholmes/ctorrent/">ctorrent</a>:
+
+        <pre>
+# ls example
+data1.ex data2.ex data3.ex
+# ctorrent -t -u {{ request.base_url }}/announce -c "Example dataset" -s example.torrent example
+        </pre>
+    After this is done, you can upload example.torrent <a href="/dataset/new">here</a> and start
+    serving your dataset by launching ctorrent: <kbd>ctorrent -d -e 0 example.torrent</kbd>. This
+    will put ctorrent in daemon mode and cause it to seed indefinitely. For managing lots of datasets
+    a better torrent client might be transmission, rtorrent or deluge.
+    </p>
+
+{% endblock %}

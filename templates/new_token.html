@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-header">Create Access Token</h1>
+
+<div id="reg-app-intro" class="alert alert-info alert-dismissable message">
+  <button type="button" class="close closer" data-dismiss="alert" aria-hidden="true">&times;</button>
+  You must assign at least one scope to each token. The scope determines what an application is allowed
+   to do with a token. Scopes work the same way that OAUTH tokens. By creating an access token a public
+   OAUTH client is registered for your user.
+  <div class="buttons">
+    <button type="button" data-dismiss="alert" class="btn btn-info closer">OK got it!</button>
+  </div>
+</div>
+
+
+<form role="form" id="application" method="POST" action="/oauth/token/new" enctype="multipart/form-data">
+    <input name=_csrf_token type=hidden value="{{ csrf_token() }}">
+    <div id="name" class="form-group">
+        <label for="name_input">Name</label>
+        <input type="text" id="name_input" class="form-control" name="name"/>
+        {% if name_error %}
+        <p class="help-block">{{name_error}}</p>
+        {% else %}
+        <p class="help-block form-field-description">Choose a name that is easy to remember.</p>
+        {% endif %}
+    </div>
+
+    <label for="#scopes">Scopes</label>
+    <div id="scopes">
+        <div class="form-group">
+            <label class="checkbox-inline">
+                <input type="checkbox" id="scope_dataset_create" name="scopes" value="dataset:create"/> dataset:create
+            </label>
+            <label class="checkbox-inline">
+                <input type="checkbox" id="scope_dataset_delete" name="scopes" value="dataset:delete"/> dataset:delete
+            </label>
+        </div>
+        <div class="form-group">
+            <label class="checkbox-inline">
+                <input type="checkbox" id="scope_dataset_permission_list" name="scopes" value="dataset:permission:list"/> dataset:permission:list
+            </label>
+            <label class="checkbox-inline">
+                <input type="checkbox" id="scope_dataset_permission_add" name="scopes" value="dataset:permission:add"/> dataset:permission:add
+            </label>
+            <label class="checkbox-inline">
+                <input type="checkbox" id="scope_dataset_permission_remove" name="scopes" value="dataset:permission:remove"/> dataset:permission:remove
+            </label>
+        </div>
+        <p class="help-block form-field-description">Select scopes to the minimal set of permissions your application needs.</p>
+    </div>
+
+    <div class="btn-toolbar buttons" role="toolbar">
+        <button type="submit" class="btn btn-success">Create Token</button>
+        <a href="/oauth/clients" class="btn btn-warning">Cancel</a>
+   </div>
+</form>
+
+{% endblock %}
+{% block js %}
+Dropzone.autoDiscover = false;
+
+$(function() {
+
+    $('#application').dropzone({
+      autoProcessQueue: false,
+      autoDiscover: false,
+      uploadMultiple: false,
+      parallelUploads: 1,
+      maxFiles: 1,
+      clickable: true,
+      previewsContainer: '#image-preview',
+      previewTemplate: '<div id="dz-preview-template" class="dz-preview dz-file-preview"><img class="img-thumbnail img-rounded" data-dz-thumbnail /></div>',
+
+
+      // The setting up of the dropzone
+      init: function() {
+        var myDropzone = this;
+
+        // First change the button to actually tell Dropzone to process the queue.
+        this.element.querySelector("button[type=submit]").addEventListener("click", function(e) {
+          // Make sure that the form isn't actually being sent.
+          e.preventDefault();
+          e.stopPropagation();
+          myDropzone.processQueue();
+          myDropzone.element.submit();
+        });
+
+        myDropzone.addEventListener('addedfile',function(e) {
+            $('#thedropzone').hide();
+        });
+
+        // Listen to the sendingmultiple event. In this case, it's the sendingmultiple event instead
+        // of the sending event because uploadMultiple is set to true.
+        this.on("sendingmultiple", function() {
+          // Gets triggered when the form is actually being sent.
+          // Hide the success button or the complete form.
+        });
+        this.on("successmultiple", function(files, response) {
+          // Gets triggered when the files have successfully been sent.
+          // Redirect user or notify of success.
+        });
+        this.on("errormultiple", function(files, response) {
+          // Gets triggered when there was an error sending the files.
+          // Maybe show form again, and notify user of error
+        });
+      }
+    });
+
+    $('#confidential_type_warning').hide();
+    $('#client_type_confidential').click(function() {
+        if ( $(this).is(':checked') ) {
+            $('#confidential_type_warning').show();
+        }
+    });
+    $('#client_type_public').click(function() {
+        if ( $(this).is(':checked') ) {
+            $('#confidential_type_warning').hide();
+        }
+    });
+
+});
+
+{% endblock %}
