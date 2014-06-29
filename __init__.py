@@ -3,8 +3,9 @@ import hashlib
 import json
 import traceback
 from PIL import Image
+import PyRSS2Gen
 from babel.dates import format_datetime
-from flask import Flask, Response, request, session, render_template, redirect, abort, jsonify
+from flask import Flask, Response, request, session, render_template, redirect, abort, jsonify, url_for
 from flask.ext.autodoc import Autodoc
 from flask.ext.negotiate import produces
 from flask.ext.oauthlib.provider import OAuth2Provider
@@ -13,13 +14,15 @@ import os
 import random
 import string
 import mimetypes
+from werkzeug.contrib.atom import AtomFeed
 from werkzeug.routing import BaseConverter
 import auth
 from torrenttools import bencode, bdecode
 from ctypes import create_string_buffer
 from binascii import hexlify
 from urllib import unquote
-from datetime import datetime, time
+from datetime import datetime
+import time
 from redis_session import RedisSessionInterface
 from tracker import get_peers, get_peer_address, pi_dict, pi_pack_peer, scrape_info
 from utils import request_wants_json, random_string, async
@@ -39,6 +42,7 @@ DEFNUMWANT = 50
 MAXNUMWANT = 20
 INTERVAL = 30
 PAGECOUNT = 10
+NLAST = 99
 
 
 class RegexConverter(BaseConverter):
@@ -101,7 +105,7 @@ def new_torrent():
                 try:
                     torrent_enc = f.read()
                     torrent_data = bdecode(torrent_enc)
-                    print torrent_data
+                    #print torrent_data
                     if not 'info' in torrent_data:
                         raise ValueError("No info in hash")
 
@@ -118,7 +122,7 @@ def new_torrent():
                         p.zadd("torrents", info_hash, 1)
                         p.zadd("torrents|seen", info_hash, time.time())
                         p.lpush("torrents|last", info_hash)
-                        p.ltrim("torrents|last", 20)
+                        p.ltrim("torrents|last", 0, NLAST)
                         p.execute()
                     if request_wants_json():
                         return jsonify(info_hash)
@@ -388,7 +392,7 @@ def _update_stats(pi, info_hash, my_pid, now):
             p.zadd("torrent|%s|leechers" % info_hash, my_pid, now)
             p.zadd("torrents|leeching", info_hash, now)
 
-        p.zunionstore("torrents|lastseen", ["torrents|seeding", "torrents|leaching", "torrents|seen"], aggregate='MAX')
+        p.zadd("torrents|seen", info_hash, now)
 
 @docs.doc("tracker")
 @app.route("/announce", methods=['GET'])
@@ -559,6 +563,36 @@ def _format_datetime(value, fmt='medium'):
 def _path_to_file(value):
     return os.path.join(*value)
 
+## RSS & ATOM Feeds
+
+@app.route('/feeds/recent.rss')
+def _feed_recent_rss():
+    rss = PyRSS2Gen.RSS2(
+        title="Recently added datasets",
+        description="Recent datasets added to %s" % request.base_url,
+        docs="",
+        link=request.url,
+        lastBuildDate=datetime.now(),
+        items=[PyRSS2Gen.RSSItem(
+            title=info_hash,
+            link=url_for("torrent", info_hash=info_hash, _external=True),
+            guid=PyRSS2Gen.Guid(url_for("torrent", info_hash=info_hash, _external=True)),
+            pubDate=datetime.now()) for info_hash in set(rc.lrange("torrents|last", 0, NLAST+1))])
+    return Response(rss.to_xml(encoding="UTF8"), mimetype="application/rss+xml")
+
+@app.route('/feeds/recent.atom')
+def _feed_recent_atom():
+    feed = AtomFeed("Recently added datasets",
+                    feed_url=request.url, url=request.url_root)
+
+    for info_hash in rc.lrange("torrents|last", 0, NLAST+1):
+        feed.add(info_hash,
+                 content_type="application/x-bittorrent",
+                 updated=datetime.now(),
+                 url=url_for("torrent", info_hash=info_hash, _external=True),
+                 published=datetime.now())
+
+    return feed.get_response()
 ## OAUTH2
 
 @app.route("/oauth/token/new", methods=['GET', 'POST'])

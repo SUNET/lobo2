@@ -19,11 +19,24 @@
 {% if tokens %}
     {% for token in tokens %}
     <div class="panel panel-default">
-        <div class="panel-heading">{{ token.client.name }}
-            <a role="button" class="btn btn-danger btn-xs pull-right" data-toggle="modal" data-target="#confirm-delete" href="#" data-href="/oauth/token/{{ token.token_id }}/remove">Remove token</a></li>
+        <div class="panel-heading">
+            {{ token.client.name }}
+
+            <div class="toolbar pull-right">
+                <a role="button" class="btn btn-danger btn-xs" data-toggle="modal" data-target="#confirm-delete" href="#" data-href="/oauth/token/{{ token.token_id }}/remove">Remove token</a></li>
+                <button class="btn btn-warning btn-xs show-secret" data-href="#{{ token.token_id }}">Show secret</button>
+            </div>
         </div>
         <div class="panel-body">
-            <dl class="dl-horizontal">
+            <div class="secret starthidden" id="{{ token.token_id }}">
+                <dl>
+                    <dt>access token</dt><dd>{{ token.access_token }}</dd>
+                    {% if token.refresh_token %}
+                    <dt>refresh token</dt><dd>{{ token.refresh_token }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+            <dl>
                 <dt>scopes</dt>
                 <dd>{{ token.scopes|join(" ") }}</dd>
                 {% if token.expires %}
@@ -36,7 +49,7 @@
     {% endfor %}
 {% endif %}
 
-<div class="modal fade" id="confirm-delete" role="dialog" aria-labelledby="confirm-delete" aria-hidden="true">
+<div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="confirm-delete" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -54,12 +67,27 @@
     </div>
 </div>
 
+
+
 {% endblock %}
 {% block js %}
 $(function() {
 
     $('#confirm-delete').on('show.bs.modal', function(e) {
         $(this).find('.danger').attr('href', $(e.relatedTarget).data('href'));
+    });
+
+    $('button.show-secret').on('click',function(e) {
+        console.log($(this).attr('data-href'));
+        var elt = $($(this).attr('data-href'));
+        console.log(elt);
+        if ($(this).hasClass("btn-warning")) {
+            $(this).removeClass("btn-warning").addClass("btn-default").text("Hide secret")
+            $(elt).show();
+        } else {
+            $(this).removeClass("btn-default").addClass("btn-warning").text("Show secret")
+            $(elt).hide();
+        }
     });
 
 });

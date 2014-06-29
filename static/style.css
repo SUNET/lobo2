@@ -131,3 +131,7 @@ p.form-field-description {
 li.token {
     padding: 5px;
 }
+
+.starthidden {
+    display: none;
+}

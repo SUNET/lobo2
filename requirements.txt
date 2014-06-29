@@ -6,3 +6,4 @@ flask-autodoc
 flask-oauthlib
 pillow
 gunicorn
+pyrss2gen

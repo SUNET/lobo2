@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css"/>
+    <link rel="alternate" href="/feeds/recent.rss" type="application/rss+xml" title="Recently added datasets" />
+    <link rel="alternate" href="/feeds/recent.atom" type="application/atom+xml" title="Recently added datasets" />
     <link href="/static/style.css" rel="stylesheet"/>
     <title>{% block title %}SUNET Datasets{% endblock %}</title>
     {% endblock %}
@@ -18,9 +20,9 @@
         <ul class="nav nav-pills pull-right">
             <li><a href="/">Home</a></li>
             {% if session is authenticated %}
-            <li><a href="/dataset/new">New Dataset</a></li>
+            <li><a href="/dataset/new">Add Dataset</a></li>
             {% endif %}
-            <li><a href="/datasets">List Datasets</a></li>
+            <li><a href="/datasets">All Datasets</a></li>
             <li><a href="/about">About</a></li>
             {% if session is authenticated %}
             <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown">{{ session['user'] }}<span class="caret"></span></a>

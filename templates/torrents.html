@@ -1,16 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
-
+    <h1 class="page-header">All Datasets</h1>
+{% if torrents %}
     <table class="table table-hover table-condensed table-bordered">
 {% for info_hash,user in torrents %}
     <tr><td><a href="/dataset/{{ info_hash }}">{{ info_hash }}</a></td><td>{{ user | default('unknown') }}</td></tr>
 {% endfor %}
     </table>
+{% else %}
+    <p>There are no datasets... <a href="/dataset/new">why not add one?</a></p>
+{% endif %}
     <ul class="nav nav-pills">
-    {% if start > 0 %}
+{% if start > 0 %}
         <li><a href="/datasets/{{ start - count }}">&laquo;{{ count }}</a></li>
-    {% endif %}
-    {% if start+count < total %}
+{% endif %}
+{% if start+count < total %}
         <li class="pull-right"><a href="/datasets/{{ start + count }}">{{ count }}&raquo;</a></li>
-    {% endif %}
+{% endif %}
+    </ul>
 {% endblock %}

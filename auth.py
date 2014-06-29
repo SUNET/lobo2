@@ -100,6 +100,10 @@ class Client():
         return self.redirect_uris[0]
 
     @property
+    def ntokens(self):
+        return rc.scard("%s|tokens" % self.client_name)
+
+    @property
     def tokens(self):
         for tid in rc.smembers("%s|tokens" % self.client_name):
             if tid is not None:
