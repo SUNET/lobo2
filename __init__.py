@@ -113,8 +113,10 @@ def new_torrent():
                     if not 'info' in torrent_data:
                         raise ValueError("No info in hash")
 
-                    if not torrent_data.get('announce', None) == tracker_url:
-                        raise ValueError("Bad tracker url: '%s'" % (torrent_data.get('announce'), tracker_url))
+                    #if not torrent_data.get('announce', None) == tracker_url:
+                    #    raise ValueError("Bad tracker url: '%s'" % (torrent_data.get('announce'), tracker_url))
+                    torrent_data['announce'] = tracker_url
+                    del torrent_data['announce-list']
                     info_hash = hashlib.sha1(bencode(torrent_data['info'])).hexdigest()
                     with rc.pipeline() as p:
                         p.set(info_hash, torrent_enc)
