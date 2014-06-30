@@ -545,7 +545,7 @@ def page_not_found(e):
 
 @app.errorhandler(401)
 def error(e):
-    return render_template("500.html"), 401
+    return render_template("401.html"), 401
 
 @app.errorhandler(500)
 def error(e):
@@ -561,7 +561,7 @@ def _format_datetime(value, fmt='medium'):
 
 @app.template_filter("path_to_file")
 def _path_to_file(value):
-    return os.path.join(*value)
+    return os.path.join(*value).decode("utf-8")
 
 ## RSS & ATOM Feeds
 
