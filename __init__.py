@@ -335,7 +335,7 @@ def _torrent_info_internal(info_hash):
 
 
 def torrent_info(info_hash):
-    if rc.zrank("torrents", info_hash) is None:
+    if rc.zscore("torrents", info_hash) is not None:
         abort(404)
 
     tm = rc.hgetall("info|%s" % info_hash)
@@ -357,7 +357,7 @@ def torrent(info_hash):
     Return the torrent metadata file for the datase identified by info_hash.
     """
     info_hash, ext = os.path.splitext(info_hash)
-    if rc.zrank("torrents", info_hash) is None:
+    if rc.zscore("torrents", info_hash) is not None:
         abort(404)
 
     torrent_enc = rc.get(info_hash)
