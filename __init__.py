@@ -382,6 +382,9 @@ def scrape():
 
     info_hash = unquote(info_hash).encode('hex')
 
+    if rc.zscore("torrents", info_hash) is None:
+        abort(403)
+
     return jsonify({'files': {info_hash: scrape_info(rc, info_hash, INTERVAL)}})
 
 @async
@@ -411,7 +414,7 @@ def announce():
     info_hash = unquote(info_hash).encode('hex')
 
     event = request.args.get('event', None)
-    if rc.zrank("torrents", info_hash) is not None:
+    if rc.zscore("torrents", info_hash) is None:
         abort(403)
 
     now = time.time()
