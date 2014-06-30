@@ -44,6 +44,10 @@ INTERVAL = 30
 PAGECOUNT = 10
 NLAST = 99
 
+def get_from_qs(qs, key):
+    for q in qs.split('&'):
+        if q.startswith(key):
+            return q[len(key):]
 
 class RegexConverter(BaseConverter):
     def __init__(self, url_map, *items):
@@ -372,11 +376,11 @@ def scrape():
     """
     The tracker scrape endpoint: https://wiki.theory.org/BitTorrentSpecification.
     """
-    info_hash = request.args.get('info_hash', None)
+    info_hash = get_from_qs(request.query_string, 'info_hash=')
     if info_hash is None:
         abort(400)
 
-    info_hash = hexlify(unquote(info_hash.encode('utf8')))
+    info_hash = unquote(info_hash).encode('hex')
 
     return jsonify({'files': {info_hash: scrape_info(rc, info_hash, INTERVAL)}})
 
@@ -400,11 +404,11 @@ def announce():
     """
     The tracker announce endpoint: https://wiki.theory.org/BitTorrentSpecification
     """
-    info_hash = request.args.get('info_hash', None)
+    info_hash = get_from_qs(request.query_string, 'info_hash=')
     if info_hash is None:
         abort(400)
 
-    info_hash = hexlify(unquote(info_hash.encode('utf8')))
+    info_hash = unquote(info_hash).encode('hex')
 
     event = request.args.get('event', None)
     if rc.zrank("torrents", info_hash) is not None:
@@ -545,7 +549,7 @@ def page_not_found(e):
 
 @app.errorhandler(401)
 def error(e):
-    return render_template("401.html"), 401
+    return render_template("500.html"), 401
 
 @app.errorhandler(500)
 def error(e):
