@@ -202,7 +202,7 @@ def torrents(start=0):
 @auth.requires_auth
 @produces("text/html")
 def _del_torrent_html(info_hash):
-    return del_torrent()
+    return del_torrent(info_hash)
 
 @app.route('/api/dataset/<regex("[a-f0-9]+"):info_hash>/delete', methods=['GET'])
 @docs.doc("api")
