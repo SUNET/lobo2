@@ -12,7 +12,7 @@ def is_authenticated(s=session):
     return 'user' in s
 
 
-def requires_auth(f, login_url="/login", oauth=None):
+def requires_auth(f, login_url="/login"):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not 'user' in session:

@@ -11,30 +11,42 @@
   </div>
 </div>
 
-<form role="form" method="POST" action="/dataset/new" enctype="multipart/form-data">
-   <input name=_csrf_token type=hidden value="{{ csrf_token() }}">
-   <div id="torrent" class="form-group">
-      <label for="torrent_input">Torrent Metadata</label>
-      <input type="file" id="torrent_input" class="form-control" name="torrent"/>
-      {% if torrent_error %}
-      <p class="help-block">{{torrent_error}}</p>
-      {% else %}
-      <p class="help-block form-field-description">Provide a bittorrent metadata file.</p>
-      {% endif %}
-   </div>
-   <div class="buttons">
-     <button type="submit" class="btn btn-success">Add Dataset</button>
-     <a href="/" class="btn btn-warning">Cancel</a>
-   </div>
-</form>
+<div id="torrent_zone" class="jumbotron">
+    <form id="torrent_form" role="form" class="dropzone dz-clickable" method="POST" action="/dataset">
+        <div class="fallback">
+            <input name="file" type="torrent" />
+        </div>
+        <div class="dz-message dz-default">
+            <span class="glyphicon glyphicon-large glyphicon-upload"></span>
+            <h2>Drop torrent-file here</h2>
+            <span class="text-xs">(or click)</span>
+        </div>
+    </form>
+</div>
 
 {% endblock %}
 {% block js %}
+Dropzone.autoDiscover = false;
 $(function() {
 
     {% if torrent_error %}
     $('#torrent').addClass('has-error');
     {% endif %}
 
+    $("#torrent_form").dropzone({
+        paramName: "torrent",
+        uploadMultiple: false,
+        acceptedFiles: "application/x-bittorrent",
+        previewTemplate: '<div class="dz-preview dz-file-preview">'+
+          '<div class="dz-error-message"><p class="help-block has-error"><span data-dz-errormessage></span></p></div>' +
+        '</div>',
+        sending: function(file, xhr, formData) {
+            formData.append("_csrf_token", "{{ csrf_token() }}");
+        },
+        success: function(file, response) {
+            //console.log(response);
+            document.location.href="/dataset/"+response['info_hash'];
+        }
+    });
 });
 {% endblock %}

@@ -34,6 +34,7 @@ app.session_interface = RedisSessionInterface()
 docs = Autodoc(app)
 oauth = OAuth2Provider(app)
 
+
 mimetypes.add_type('application/x-bittorrent', '.torrent')
 
 rc = Redis()
@@ -44,10 +45,12 @@ INTERVAL = 30
 PAGECOUNT = 10
 NLAST = 99
 
+
 def get_from_qs(qs, key):
     for q in qs.split('&'):
         if q.startswith(key):
             return q[len(key):]
+
 
 class RegexConverter(BaseConverter):
     def __init__(self, url_map, *items):
@@ -80,10 +83,48 @@ def json_scrape(info_hash):
     return jsonify(scrape_info(rc, info_hash, INTERVAL))
 
 @app.route("/dataset/new", methods=['GET', 'POST'])
+@produces("text/html")
 @auth.requires_auth
-@produces('text/html')
 def _new_torrent_html():
     return new_torrent()
+
+@app.route("/dataset", methods=['POST'])
+@auth.requires_auth
+@produces("application/json")
+def add_torrent():
+    tracker_url = "%s/announce" % app.config.get('BASE_URL')
+    try:
+        torrent_data = request.form.get('torrent', None)
+        if torrent_data is None or not torrent_data:
+            f = request.files.get('torrent', None)
+            if f is not None and f:
+                torrent_enc = f.read()
+                torrent_data = bdecode(torrent_enc)
+                #print torrent_data
+                if not 'info' in torrent_data:
+                    raise ValueError("No info in hash")
+
+                torrent_data['announce'] = tracker_url
+                if "announce-list" in torrent_data:
+                    del torrent_data['announce-list']
+                info_hash = hashlib.sha1(bencode(torrent_data['info'])).hexdigest()
+                with rc.pipeline() as p:
+                    p.set(info_hash, bencode(torrent_data))
+                    p.hmset("info|%s" % info_hash, {'user': session['user'], 'info_hash': info_hash})
+                    p.sadd("perm|%s" % info_hash,
+                           'user:%s:w' % session['user'],
+                           'user:%s:d' % session['user'],
+                           'user:%s:a' % session['user'])
+                    p.zadd("torrents", info_hash, 1)
+                    p.zadd("torrents|seen", info_hash, time.time())
+                    p.lpush("torrents|last", info_hash)
+                    p.ltrim("torrents|last", 0, NLAST)
+                    p.execute()
+
+                return jsonify(dict(info_hash=info_hash))
+    except Exception, ex:
+        traceback.print_exc()
+        abort(500)
 
 @app.route("/api/dataset", methods=['POST'])
 @oauth.require_oauth("dataset:create")
@@ -129,7 +170,7 @@ def new_torrent():
                         p.ltrim("torrents|last", 0, NLAST)
                         p.execute()
                     if request_wants_json():
-                        return jsonify(info_hash)
+                        return jsonify(dict(info_hash=info_hash))
                     else:
                         return redirect("/dataset/%s" % info_hash)
                 except Exception, ex:
@@ -229,7 +270,7 @@ def del_torrent(info_hash):
         except Exception, ex:
             traceback.print_exc()
         if request_wants_json():
-            return jsonify(info_hash)
+            return jsonify(dict(info_hash=info_hash))
         else:
             return redirect("/datasets")
     else:
