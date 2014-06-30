@@ -407,7 +407,7 @@ def announce():
     info_hash = hexlify(unquote(info_hash.encode('utf8')))
 
     event = request.args.get('event', None)
-    if not rc.zrank("torrents", info_hash):
+    if rc.zrank("torrents", info_hash) is not None:
         abort(403)
 
     now = time.time()
