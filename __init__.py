@@ -92,7 +92,7 @@ def _new_torrent_html():
 def _new_torrent_json():
     """
     Creates a new dataset by POST:ing (multipart/form-data) a form with a single argument 'torrent' containing a
-    BitTorrent metadata file describing the dataset. The 'announce' item in the torrent file must point to the tracker
+    BitTorrent metadata file describing the dataset. The 'announce' item in the torrent file will be replace by the tracker
     in the service.
     """
     return new_torrent()
@@ -113,8 +113,6 @@ def new_torrent():
                     if not 'info' in torrent_data:
                         raise ValueError("No info in hash")
 
-                    #if not torrent_data.get('announce', None) == tracker_url:
-                    #    raise ValueError("Bad tracker url: '%s'" % (torrent_data.get('announce'), tracker_url))
                     torrent_data['announce'] = tracker_url
                     del torrent_data['announce-list']
                     info_hash = hashlib.sha1(bencode(torrent_data['info'])).hexdigest()
