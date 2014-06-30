@@ -119,7 +119,7 @@ def new_torrent():
                     del torrent_data['announce-list']
                     info_hash = hashlib.sha1(bencode(torrent_data['info'])).hexdigest()
                     with rc.pipeline() as p:
-                        p.set(info_hash, torrent_enc)
+                        p.set(info_hash, bencode(torrent_data))
                         p.hmset("info|%s" % info_hash, {'user': session['user'], 'info_hash': info_hash})
                         p.sadd("perm|%s" % info_hash,
                                'user:%s:w' % session['user'],
