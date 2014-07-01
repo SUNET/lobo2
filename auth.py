@@ -22,16 +22,15 @@ def requires_auth(f, login_url="/login"):
 
 
 def _totimestamp(ts):
-    if ts is None:
-        return 0
+    if not ts or ts is None:
+        return ''
     return totimestamp(ts)
 
 
 def _fromtimestamp(ts):
-    ts = float(ts)
-    if not ts > 0:
-        return None
-    return datetime.fromtimestamp(float(ts))
+    if ts:
+        return datetime.fromtimestamp(float(ts))
+    return None
 
 # OAUTH2 model
 
@@ -205,7 +204,7 @@ class Token(object):
 
         return Token(**data)
 
-    def __init__(self, client_id, user_id, token_type='bearer', access_token='', refresh_token='', expires=0, scopes=[], personal=False):
+    def __init__(self, client_id, user_id, token_type='bearer', access_token='', refresh_token='', expires='', scopes=[], personal=False):
         self.client_id = client_id
         self.user_id = user_id
         self.token_type = token_type

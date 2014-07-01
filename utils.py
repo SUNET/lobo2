@@ -8,7 +8,7 @@ from flask import request
 from datetime import datetime, timedelta
 
 
-def totimestamp(dt, epoch=datetime(1970,1,1)):
+def totimestamp(dt, epoch=datetime(1970, 1, 1)):
     td = dt - epoch
     # return td.total_seconds()
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 1e6
@@ -28,6 +28,7 @@ def async(f):
         thr = Thread(target=f, args=args, kwargs=kwargs)
         thr.start()
     return wrapper
+
 
 def get_from_qs(qs, key):
     for q in qs.split('&'):
