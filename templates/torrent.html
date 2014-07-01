@@ -15,8 +15,8 @@
 <table class="table table-bordered">
     <tr><th>User</th><td>{{ user }}</td></tr>
     <tr><th>Creation Date</th><td>{{ creation_time | strftime }}</td></tr>
-    {% if name %}
-    <tr><th>Name</th><td>{{ name }}</td></tr>
+    {% if info['name'] %}
+    <tr><th>Name</th><td>{{ info['name'] }}</td></tr>
     {%  endif %}
     <tr><th>Torrent Metadata</th><td><a href="/api/dataset/{{ info_hash }}.torrent">{{ info_hash }}</a></td></tr>
     {%  if description %}

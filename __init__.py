@@ -393,8 +393,9 @@ def torrent_info(info_hash):
     torrent_data = bdecode(torrent_enc)
     torrent_data.update(tm)
     torrent_data['creation_time'] = datetime.fromtimestamp(torrent_data.get('creation date', 0))
+    if 'pieces' in torrent_data['info']:
+        del torrent_data['info']['pieces']
     if request_wants_json():
-        del torrent_data['pieces']
         return jsonify(torrent_data)
     else:
         return render_template("torrent.html", **torrent_data)
