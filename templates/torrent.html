@@ -15,11 +15,15 @@
 <table class="table table-bordered">
     <tr><th>User</th><td>{{ user }}</td></tr>
     <tr><th>Creation Date</th><td>{{ creation_time | strftime }}</td></tr>
+    {% if name %}
+    <tr><th>Name</th><td>{{ name }}</td></tr>
+    {%  endif %}
     <tr><th>Torrent Metadata</th><td><a href="/api/dataset/{{ info_hash }}.torrent">{{ info_hash }}</a></td></tr>
     {%  if description %}
     <tr><th>Description</th><td>{{ description }}</td></tr>
     {%  endif %}
     <tr><th>Status</th><td id="scrape"></td></tr>
+    {% if info['files'] %}
     <tr><th>Files</th><td>
         <ul class="list-unstyled">
         {% for f in info['files'] %}
@@ -27,6 +31,7 @@
         {% endfor %}
         </ul>
     </td></tr>
+    {% endif %}
 </table>
 
 <div class="modal fade" id="permissions" tabindex="-1" role="dialog" aria-labelledby="permissions" aria-hidden="true">

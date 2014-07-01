@@ -28,3 +28,8 @@ def async(f):
         thr = Thread(target=f, args=args, kwargs=kwargs)
         thr.start()
     return wrapper
+
+def get_from_qs(qs, key):
+    for q in qs.split('&'):
+        if q.startswith(key):
+            return q[len(key):]

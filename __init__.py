@@ -18,13 +18,11 @@ from werkzeug.contrib.atom import AtomFeed
 from werkzeug.routing import BaseConverter
 import auth
 from torrenttools import bencode, bdecode
-from ctypes import create_string_buffer
-from urllib import unquote
 from datetime import datetime
 import time
 from redis_session import RedisSessionInterface
-from tracker import get_peers, get_peer_address, pi_dict, pi_pack_peer, scrape_info
-from utils import request_wants_json, random_string, async
+import tracker
+from utils import request_wants_json, random_string
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
@@ -33,28 +31,19 @@ app.session_interface = RedisSessionInterface()
 docs = Autodoc(app)
 oauth = OAuth2Provider(app)
 
-
 mimetypes.add_type('application/x-bittorrent', '.torrent')
 
 rc = Redis()
 
-DEFNUMWANT = 50
-MAXNUMWANT = 20
-INTERVAL = 30
 PAGECOUNT = 10
 NLAST = 99
-
-
-def get_from_qs(qs, key):
-    for q in qs.split('&'):
-        if q.startswith(key):
-            return q[len(key):]
 
 
 class RegexConverter(BaseConverter):
     def __init__(self, url_map, *items):
         super(RegexConverter, self).__init__(url_map)
         self.regex = items[0]
+
 
 app.url_map.converters['regex'] = RegexConverter
 
@@ -63,13 +52,16 @@ app.url_map.converters['regex'] = RegexConverter
 def apidocs():
     return docs.html('docs.html', group='api')
 
+
 @app.route('/docs/tracker')
 def trackerdocs():
     return docs.html('docs.html', group='tracker')
 
+
 @app.route("/me")
 def profile():
     return render_template("profile.html")
+
 
 @app.route("/scrape/<info_hash>")
 @docs.doc("api")
@@ -79,13 +71,15 @@ def json_scrape(info_hash):
     Returns a json-dict with 3 integer items: completed, downloaded and incomplete representing the same information
     that is available in the BT scrape protocol.
     """
-    return jsonify(scrape_info(rc, info_hash, INTERVAL))
+    return tracker.json_scrape(info_hash)
+
 
 @app.route("/dataset/new", methods=['GET', 'POST'])
 @produces("text/html")
 @auth.requires_auth
 def _new_torrent_html():
     return new_torrent()
+
 
 @app.route("/dataset", methods=['POST'])
 @auth.requires_auth
@@ -99,7 +93,7 @@ def add_torrent():
             if f is not None and f:
                 torrent_enc = f.read()
                 torrent_data = bdecode(torrent_enc)
-                #print torrent_data
+                # print torrent_data
                 if not 'info' in torrent_data:
                     raise ValueError("No info in hash")
 
@@ -125,6 +119,7 @@ def add_torrent():
         traceback.print_exc()
         abort(500)
 
+
 @app.route("/api/dataset", methods=['POST'])
 @oauth.require_oauth("dataset:create")
 @docs.doc("api")
@@ -149,7 +144,7 @@ def new_torrent():
                 try:
                     torrent_enc = f.read()
                     torrent_data = bdecode(torrent_enc)
-                    #print torrent_data
+                    # print torrent_data
                     if not 'info' in torrent_data:
                         raise ValueError("No info in hash")
 
@@ -190,28 +185,34 @@ def new_torrent():
     else:
         abort(400)
 
+
 @app.route("/")
 @produces("text/html")
 def welcome():
     return render_template("index.html")
+
 
 @app.route("/about")
 @produces("text/html")
 def about():
     return render_template("about.html")
 
+
 @app.route("/api")
 def _api_redirect():
     return redirect("/docs/api", 301)
+
 
 @app.route("/datasets")
 def _first_torrents():
     return redirect("/datasets/0")
 
+
 @app.route("/datasets/<int:start>", methods=['GET'])
 @produces("text/html")
 def _torrents_html(start=0):
     return torrents(start)
+
 
 @app.route("/api/datasets/<int:start>", methods=['GET'])
 @docs.doc("api")
@@ -238,11 +239,13 @@ def torrents(start=0):
     else:
         return render_template("torrents.html", torrents=tsummary, start=start, count=count, total=total)
 
+
 @app.route('/dataset/<regex("[a-f0-9]+"):info_hash>/delete', methods=['GET'])
 @auth.requires_auth
 @produces("text/html")
 def _del_torrent_html(info_hash):
     return del_torrent(info_hash)
+
 
 @app.route('/api/dataset/<regex("[a-f0-9]+"):info_hash>/delete', methods=['GET'])
 @docs.doc("api")
@@ -275,6 +278,7 @@ def del_torrent(info_hash):
     else:
         abort(401)
 
+
 @app.route('/api/dataset/<regex("[a-f0-9]+"):info_hash>/permissions', methods=['GET'])
 @docs.doc("api")
 @oauth.require_oauth("dataset:permission:list")
@@ -289,6 +293,7 @@ def _get_permissions_api(info_hash):
     """
     return get_permissions(info_hash)
 
+
 @app.route('/dataset/<regex("[a-f0-9]+"):info_hash>/permissions', methods=['GET'])
 @auth.requires_auth
 @produces("application/json")
@@ -301,6 +306,7 @@ def get_permissions(info_hash):
                     status=200,
                     content_type="application/json")
 
+
 @app.route('/api/dataset/<regex("[a-f0-9]+"):info_hash>/permission/remove/<perm>', methods=['GET'])
 @docs.doc("api")
 @oauth.require_oauth("dataset:permission:remove")
@@ -310,6 +316,7 @@ def _remove_permission_api(info_hash, perm):
     Remove a permission for the dataset identified by info_hash.
     """
     return remove_permission(info_hash, perm)
+
 
 @app.route('/dataset/<regex("[a-f0-9]+"):info_hash>/permission/remove/<perm>', methods=['GET'])
 @auth.requires_auth
@@ -328,6 +335,7 @@ def remove_permission(info_hash, perm):
                     status=200,
                     content_type="application/json")
 
+
 @app.route('/api/dataset/<regex("[a-f0-9]+"):info_hash>/permission/add/<perms>', methods=['GET'])
 @docs.doc("api")
 @oauth.require_oauth("dataset:permission:add")
@@ -338,6 +346,7 @@ def _add_permisson_api(info_hash, perms):
     '+'-separated list of permissions in the format described above.
     """
     return add_permission(info_hash, perms)
+
 
 @app.route('/dataset/<regex("[a-f0-9]+"):info_hash>/permission/add/<perms>', methods=['GET'])
 @auth.requires_auth
@@ -367,6 +376,7 @@ def _torrent_info_api(info_hash):
     Returns a json-representation of the dataset torrent metadata.
     """
     return torrent_info(info_hash)
+
 
 @app.route("/dataset/<regex('[a-f0-9A-F]+'):info_hash>", methods=['GET'])
 @produces("text/html")
@@ -410,133 +420,20 @@ def torrent(info_hash):
                     status=200,
                     mimetype="application/x-bittorrent")
 
+
 @docs.doc("tracker")
 @app.route("/scrape", methods=['GET'])
-def scrape():
-    """
-    The tracker scrape endpoint: https://wiki.theory.org/BitTorrentSpecification.
-    """
-    info_hash = get_from_qs(request.query_string, 'info_hash=')
-    if info_hash is None:
-        abort(400)
+def _scrape():
+    return tracker.scrape()
 
-    info_hash = unquote(info_hash).encode('hex')
-
-    if rc.zscore("torrents", info_hash) is None:
-        abort(403)
-
-    return jsonify({'files': {info_hash: scrape_info(rc, info_hash, INTERVAL)}})
-
-@async
-def _update_stats(pi, info_hash, my_pid, now):
-    with Redis().pipeline() as p:
-        if pi.get('left', None) == 0:
-            p.zadd("torrent|%s|seeders" % info_hash, my_pid, now)
-            p.zrem("torrent|%s|leechers" % info_hash, my_pid)
-            p.zadd("torrents|seeding", info_hash, now)
-        else:
-            p.zrem("torrent|%s|seeders" % info_hash, my_pid)
-            p.zadd("torrent|%s|leechers" % info_hash, my_pid, now)
-            p.zadd("torrents|leeching", info_hash, now)
-
-        p.zadd("torrents|seen", info_hash, now)
 
 @docs.doc("tracker")
 @app.route("/announce", methods=['GET'])
-def announce():
-    """
-    The tracker announce endpoint: https://wiki.theory.org/BitTorrentSpecification
-    """
-    info_hash = get_from_qs(request.query_string, 'info_hash=')
-    if info_hash is None:
-        abort(400)
-
-    info_hash = unquote(info_hash).encode('hex')
-
-    event = request.args.get('event', None)
-    if rc.zscore("torrents", info_hash) is None:
-        abort(403)
-
-    now = time.time()
-
-    ip, port = get_peer_address()
-    my_pid = "peer|%s|%s|%d" % (info_hash, ip, port)
-    print my_pid
-    pi = rc.hgetall(my_pid)
-    if pi is None:
-        pi = dict()
-
-    numwant = int(request.args.get('numwant', DEFNUMWANT))
-    if numwant > MAXNUMWANT:
-        numwant = MAXNUMWANT
-    if numwant < 0:
-        numwant = DEFNUMWANT
-
-    for key in ('uploaded', 'downloaded', 'left', 'corrupt'):
-        v = request.args.get(key, None)
-        if v is not None:
-            pi[key] = v
-
-    pi['port'] = port
-    pi['ip'] = ip
-    if event is not None:
-        pi['state'] = event
-
-    _update_stats(pi, info_hash, my_pid, now)
-
-    rc.hmset(my_pid, pi)
-    rc.expire(my_pid, 2 * INTERVAL)
-    if event == 'stopped':
-        rc.srem("peers|%s" % info_hash, my_pid)
-    else:
-        rc.sadd("peers|%s" % info_hash, my_pid)
-
-    compact = bool(request.args.get('compact', False))
-
-    peers = dict()
-    seeding = 0
-    downloaded = 0
-    count = 0
-    p4str = create_string_buffer(numwant * 6 + 1)
-    p6str = create_string_buffer(numwant * 18 + 1)
-    offset = 0
-    resp = dict()
-
-    if not compact:
-        resp['peers'] = []
-
-    for ppi in get_peers(rc, info_hash, numwant):
-        print ppi
-        if ppi.get('state', None) == 'started' or ppi.get('state', None) == 'completed':
-            count += 1
-            if ppi.get('left', None) == 0:
-                seeding += 1
-
-            if ppi.get('state', None) == 'completed':
-                downloaded += 1
-
-            if compact:
-                offset = offset + pi_pack_peer(ppi, p4str, p6str, offset)
-            else:
-                resp['peers'].append(pi_dict(ppi))
-
-    resp['complete'] = seeding
-    resp['downloaded'] = downloaded
-    resp['incomplete'] = count - seeding
-    resp['interval'] = INTERVAL
-
-    if compact:
-        if p4str.value:
-            resp['peers'] = p4str.raw[:offset]
-        if p6str.value:
-            resp['peers6'] = p6str.raw[:offset]
-
-    return Response(response=bencode(resp),
-                    status=200,
-                    mimetype="text/plain")
+def _announce():
+    return tracker.announce()
 
 
-## Infrastructure
+# # Infrastructure
 
 @app.before_request
 def csrf_protect():
@@ -564,7 +461,9 @@ def has_perm(info_hash, perm):
 
     return rc.sismember("perm|%s" % info_hash, "user:%s:%s" % (session['user'], perm))
 
+
 app.jinja_env.tests['permission'] = has_perm
+
 
 @app.route("/login")
 def login():
@@ -580,23 +479,28 @@ def login():
 
     abort(401)
 
+
 @app.route("/logout")
 def logout():
     if 'user' in session:
         del session['user']
     return redirect("/")
 
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
+
 
 @app.errorhandler(401)
 def error(e):
     return render_template("500.html"), 401
 
+
 @app.errorhandler(500)
 def error(e):
     return render_template("500.html"), 500
+
 
 @app.template_filter("strftime")
 def _format_datetime(value, fmt='medium'):
@@ -606,9 +510,11 @@ def _format_datetime(value, fmt='medium'):
         fmt = "EE dd.MM.y HH:mm"
     return format_datetime(value, fmt)
 
+
 @app.template_filter("path_to_file")
 def _path_to_file(value):
     return os.path.join(*value).decode("utf-8")
+
 
 ## RSS & ATOM Feeds
 
@@ -624,15 +530,16 @@ def _feed_recent_rss():
             title=info_hash,
             link=url_for("torrent", info_hash=info_hash, _external=True),
             guid=PyRSS2Gen.Guid(url_for("torrent", info_hash=info_hash, _external=True)),
-            pubDate=datetime.now()) for info_hash in set(rc.lrange("torrents|last", 0, NLAST+1))])
+            pubDate=datetime.now()) for info_hash in set(rc.lrange("torrents|last", 0, NLAST + 1))])
     return Response(rss.to_xml(encoding="UTF8"), mimetype="application/rss+xml")
+
 
 @app.route('/feeds/recent.atom')
 def _feed_recent_atom():
     feed = AtomFeed("Recently added datasets",
                     feed_url=request.url, url=request.url_root)
 
-    for info_hash in rc.lrange("torrents|last", 0, NLAST+1):
+    for info_hash in rc.lrange("torrents|last", 0, NLAST + 1):
         feed.add(info_hash,
                  content_type="application/x-bittorrent",
                  updated=datetime.now(),
@@ -640,6 +547,8 @@ def _feed_recent_atom():
                  published=datetime.now())
 
     return feed.get_response()
+
+
 ## OAUTH2
 
 @app.route("/oauth/token/new", methods=['GET', 'POST'])
@@ -658,7 +567,7 @@ def create_token(*args, **kwargs):
         errors['scopes_error'] = 'Select at least one scope'
 
     if errors:
-        return render_template("new_token.html",errors=errors)
+        return render_template("new_token.html", errors=errors)
 
     client = auth.Client.from_dict(dict(name=request.form.get('name'),
                                         user_id=session['user'],
@@ -672,7 +581,8 @@ def create_token(*args, **kwargs):
                                       token_type='bearer',
                                       personal=True,
                                       access_token=random_string(64),
-                                      scopes=" ".join([x.encode('ascii') for x in request.form.getlist('scopes')]))).save()
+                                      scopes=" ".join(
+                                          [x.encode('ascii') for x in request.form.getlist('scopes')]))).save()
     print "saved token %s" % repr(token)
     rc.sadd("user|%s|tokens" % session['user'], token.token_id)
     return redirect("/oauth/tokens")
@@ -725,17 +635,22 @@ def create_client(*args, **kwargs):
 
     return redirect("/oauth/clients")
 
+
 @app.route('/oauth/clients', methods=['GET'])
 @auth.requires_auth
 def list_client():
-    clients = [auth.get_client(client_id) for client_id in rc.smembers("user|%s|clients" % session['user']) if client_id is not None]
+    clients = [auth.get_client(client_id) for client_id in rc.smembers("user|%s|clients" % session['user']) if
+               client_id is not None]
     return render_template("clients.html", clients=clients)
+
 
 @app.route('/oauth/tokens', methods=['GET'])
 @auth.requires_auth
 def list_tokens():
-    tokens = [auth.get_token(token_id) for token_id in rc.smembers("user|%s|tokens" % session['user']) if token_id is not None]
+    tokens = [auth.get_token(token_id) for token_id in rc.smembers("user|%s|tokens" % session['user']) if
+              token_id is not None]
     return render_template("tokens.html", tokens=tokens)
+
 
 @app.route('/oauth/client/<client_id>/remove', methods=['GET'])
 @auth.requires_auth
@@ -748,6 +663,7 @@ def remove_client(client_id):
         client.delete()
     return redirect("/oauth/clients")
 
+
 @app.route('/oauth/token/<token_id>/remove', methods=['GET'])
 @auth.requires_auth
 def remove_token(token_id):
@@ -758,6 +674,7 @@ def remove_token(token_id):
     if token is not None:
         token.delete()
     return redirect("/oauth/tokens")
+
 
 @app.route('/oauth/authorize', methods=['GET', 'POST'])
 @auth.requires_auth
@@ -772,32 +689,39 @@ def authorize(*args, **kwargs):
     confirm = request.form.get('confirm', 'no')
     return confirm == 'yes'
 
+
 @app.route('/oauth/token', methods=['POST'])
 @oauth.token_handler
 def access_token():
     return None
 
+
 @oauth.clientgetter
 def load_client(client_id):
     return auth.get_client(client_id)
+
 
 @oauth.tokengetter
 def load_token(access_token=None, refresh_token=None):
     return auth.load_token(access_token, refresh_token)
 
+
 @oauth.tokensetter
 def save_token(token, r, *args, **kwargs):
     return auth.save_token(token, r, args, kwargs)
 
+
 @oauth.grantgetter
 def load_grant(client_id, code):
     return auth.load_grant(client_id, code)
+
 
 @oauth.grantsetter
 def save_grant(client_id, code, r, *args, **kwargs):
     if not auth.is_authenticated(session):
         abort(400)
     return auth.save_grant(session['user'], client_id, code, r, args, kwargs)
+
 
 if __name__ == "__main__":
     app.run()
