@@ -73,7 +73,7 @@ def get_peers(rc, info_hash, numwant=0):
 
 
 def json_scrape(info_hash):
-    jsonify(scrape_info(info_hash, INTERVAL))
+    return jsonify(scrape_info(info_hash, INTERVAL))
 
 
 def scrape_info(info_hash, interval):
