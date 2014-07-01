@@ -19,7 +19,6 @@ from werkzeug.routing import BaseConverter
 import auth
 from torrenttools import bencode, bdecode
 from ctypes import create_string_buffer
-from binascii import hexlify
 from urllib import unquote
 from datetime import datetime
 import time
@@ -492,7 +491,7 @@ def announce():
     else:
         rc.sadd("peers|%s" % info_hash, my_pid)
 
-    compact = not bool(request.args.get('compact', True))
+    compact = bool(request.args.get('compact', False))
 
     peers = dict()
     seeding = 0

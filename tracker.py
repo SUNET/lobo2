@@ -26,7 +26,7 @@ def pi_pack_peer(pi, buf4, buf6, offset):
         alen = 18
         buf = buf6
 
-    struct.pack_into(fmt, buf, offset, socket.inet_pton(family, pi.get('ip', None)), pi.get('port', None))
+    struct.pack_into(fmt, buf, offset, socket.inet_pton(family, pi.get('ip', None)), int(pi.get('port', None)))
     return len
 
 
