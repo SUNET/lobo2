@@ -447,6 +447,7 @@ def logout():
 
 @app.errorhandler(APIException)
 def handle_invalid_usage(err):
+    traceback.print_exc()
     response = jsonify(err.to_dict())
     response.status_code = err.status_code
     return response
@@ -657,7 +658,7 @@ def authorize(*args, **kwargs):
 
 @app.route('/oauth/token', methods=['POST'])
 @oauth.token_handler
-def access_token():
+def _access_token():
     return None
 
 

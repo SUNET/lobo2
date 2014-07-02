@@ -202,8 +202,6 @@ class Token(object):
         if not data:
             return None
 
-        print data
-
         if 'scopes' in data:
             data['scopes'] = data.pop('scopes').split()
         if 'expires' in data:
@@ -282,7 +280,7 @@ def get_token(tid):
 
 
 def load_token(access_token=None, refresh_token=None):
-    print access_token
+    print "loading access token %s" % access_token
     if access_token is not None:
         return Token.from_dict(rc.hgetall(rc.get("oauth2|token|access|%s" % access_token)))
     if refresh_token is not None:
