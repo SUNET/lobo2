@@ -4,7 +4,6 @@ from hashlib import sha1
 from datetime import datetime, timedelta
 from utils import totimestamp, AuthException
 from redis import Redis
-import time
 
 __author__ = 'leifj'
 

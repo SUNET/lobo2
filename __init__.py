@@ -22,6 +22,7 @@ from datetime import datetime
 import time
 from redis_session import RedisSessionInterface
 import tracker
+import logging
 from utils import request_wants_json, random_string, APIException, AppException
 
 app = Flask(__name__)
@@ -32,6 +33,9 @@ docs = Autodoc(app)
 oauth = OAuth2Provider(app)
 
 mimetypes.add_type('application/x-bittorrent', '.torrent')
+
+app.debug = True
+logging.basicConfig(level=logging.DEBUG)
 
 rc = Redis()
 
