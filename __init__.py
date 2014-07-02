@@ -22,7 +22,7 @@ from datetime import datetime
 import time
 from redis_session import RedisSessionInterface
 import tracker
-from utils import request_wants_json, random_string
+from utils import request_wants_json, random_string, APIException, AppException
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
@@ -74,50 +74,60 @@ def json_scrape(info_hash):
     return tracker.json_scrape(info_hash)
 
 
+def add_torrent():
+    tracker_url = "%s/announce" % app.config.get('BASE_URL')
+    f = request.files.get('torrent', None)
+    if f is not None and f:
+        torrent_enc = f.read()
+        torrent_data = bdecode(torrent_enc)
+        # print torrent_data
+        if not 'info' in torrent_data:
+            raise ValueError("No info in hash")
+
+        torrent_data['announce'] = tracker_url
+        if "announce-list" in torrent_data:
+            del torrent_data['announce-list']
+        info_hash = hashlib.sha1(bencode(torrent_data['info'])).hexdigest()
+        user = auth.current_user()
+        with rc.pipeline() as p:
+            p.set(info_hash, bencode(torrent_data))
+            p.hmset("info|%s" % info_hash, {'user': user, 'info_hash': info_hash})
+            p.sadd("perm|%s" % info_hash,
+                   'user:%s:w' % user,
+                   'user:%s:d' % user,
+                   'user:%s:a' % user)
+            p.zadd("torrents", info_hash, 1)
+            p.zadd("torrents|seen", info_hash, time.time())
+            p.lpush("torrents|last", info_hash)
+            p.ltrim("torrents|last", 0, NLAST)
+            p.execute()
+        return info_hash
+    else:
+        raise APIException("torrent file is required")
+
+
 @app.route("/dataset/new", methods=['GET', 'POST'])
 @produces("text/html")
 @auth.requires_auth
 def _new_torrent_html():
-    return new_torrent()
+    errors = dict()
+    if request.method == 'POST':
+        errors = dict()
+        try:
+            info_hash = add_torrent()
+        except AppException, ex:
+            errors['torrent_error'] = ex.message
+
+    errors.update({'tracker_url': "%s/announce" % app.config.get('BASE_URL')})
+    return render_template('new_torrent.html', **errors)
 
 
 @app.route("/dataset", methods=['POST'])
 @auth.requires_auth
 @produces("application/json")
-def add_torrent():
-    tracker_url = "%s/announce" % app.config.get('BASE_URL')
-    try:
-        torrent_data = request.form.get('torrent', None)
-        if torrent_data is None or not torrent_data:
-            f = request.files.get('torrent', None)
-            if f is not None and f:
-                torrent_enc = f.read()
-                torrent_data = bdecode(torrent_enc)
-                # print torrent_data
-                if not 'info' in torrent_data:
-                    raise ValueError("No info in hash")
-
-                torrent_data['announce'] = tracker_url
-                if "announce-list" in torrent_data:
-                    del torrent_data['announce-list']
-                info_hash = hashlib.sha1(bencode(torrent_data['info'])).hexdigest()
-                with rc.pipeline() as p:
-                    p.set(info_hash, bencode(torrent_data))
-                    p.hmset("info|%s" % info_hash, {'user': session['user'], 'info_hash': info_hash})
-                    p.sadd("perm|%s" % info_hash,
-                           'user:%s:w' % session['user'],
-                           'user:%s:d' % session['user'],
-                           'user:%s:a' % session['user'])
-                    p.zadd("torrents", info_hash, 1)
-                    p.zadd("torrents|seen", info_hash, time.time())
-                    p.lpush("torrents|last", info_hash)
-                    p.ltrim("torrents|last", 0, NLAST)
-                    p.execute()
-
-                return jsonify(dict(info_hash=info_hash))
-    except Exception, ex:
-        traceback.print_exc()
-        abort(500)
+def _add_torrent():
+    info_hash = add_torrent()
+    return jsonify(dict(info_hash=info_hash))
 
 
 @app.route("/api/dataset", methods=['POST'])
@@ -128,63 +138,10 @@ def _new_torrent_json():
     """
     Creates a new dataset by POST:ing (multipart/form-data) a form with a single argument 'torrent' containing a
     BitTorrent metadata file describing the dataset. The 'announce' item in the torrent file will be replace by the tracker
-    in the service.
+    in the service. Returns the newly created info_hash (hex encoded)
     """
-    return new_torrent()
-
-
-def new_torrent():
-    tracker_url = "%s/announce" % app.config.get('BASE_URL')
-    if request.method == 'POST':
-        errors = dict()
-        torrent_data = request.form.get('torrent', None)
-        if torrent_data is None or not torrent_data:
-            f = request.files.get('torrent', None)
-            if f is not None and f:
-                try:
-                    torrent_enc = f.read()
-                    torrent_data = bdecode(torrent_enc)
-                    # print torrent_data
-                    if not 'info' in torrent_data:
-                        raise ValueError("No info in hash")
-
-                    torrent_data['announce'] = tracker_url
-                    del torrent_data['announce-list']
-                    info_hash = hashlib.sha1(bencode(torrent_data['info'])).hexdigest()
-                    with rc.pipeline() as p:
-                        p.set(info_hash, bencode(torrent_data))
-                        p.hmset("info|%s" % info_hash, {'user': session['user'], 'info_hash': info_hash})
-                        p.sadd("perm|%s" % info_hash,
-                               'user:%s:w' % session['user'],
-                               'user:%s:d' % session['user'],
-                               'user:%s:a' % session['user'])
-                        p.zadd("torrents", info_hash, 1)
-                        p.zadd("torrents|seen", info_hash, time.time())
-                        p.lpush("torrents|last", info_hash)
-                        p.ltrim("torrents|last", 0, NLAST)
-                        p.execute()
-                    if request_wants_json():
-                        return jsonify(dict(info_hash=info_hash))
-                    else:
-                        return redirect("/dataset/%s" % info_hash)
-                except Exception, ex:
-                    traceback.print_exc()
-                    errors['torrent_error'] = "Does not appear to be a valid torrent file: %s" % ex.message
-
-        if torrent_data is None or not torrent_data:
-            errors['_error'] = "Please provide a torrent metadata file"
-
-        if errors:
-            errors.update({'tracker_url': tracker_url})
-            return render_template('new_torrent.html', **errors)
-    elif request.method == 'GET':
-        if request_wants_json():
-            abort(400)
-        else:
-            return render_template("new_torrent.html", tracker_url=tracker_url)
-    else:
-        abort(400)
-
+    info_hash = add_torrent()
+    return jsonify(dict(info_hash=info_hash))
 
 @app.route("/")
 @produces("text/html")
@@ -438,7 +395,7 @@ def _announce():
 
 @app.before_request
 def csrf_protect():
-    if request.method == "POST":
+    if request.method == "POST" and not 'api' in request.url:
         token = session.pop('_csrf_token', None)
         if not token or token != request.form.get('_csrf_token'):
             abort(403)
@@ -460,7 +417,7 @@ def has_perm(info_hash, perm):
     if not rc.exists("perm|%s" % info_hash):
         return False
 
-    return rc.sismember("perm|%s" % info_hash, "user:%s:%s" % (session['user'], perm))
+    return rc.sismember("perm|%s" % info_hash, "user:%s:%s" % (auth.current_user(), perm))
 
 
 app.jinja_env.tests['permission'] = has_perm
@@ -488,6 +445,12 @@ def logout():
     return redirect("/")
 
 
+@app.errorhandler(APIException)
+def handle_invalid_usage(err):
+    response = jsonify(err.to_dict())
+    response.status_code = err.status_code
+    return response
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
@@ -495,7 +458,7 @@ def page_not_found(e):
 
 @app.errorhandler(401)
 def error(e):
-    return render_template("500.html"), 401
+    return render_template("401.html"), 401
 
 
 @app.errorhandler(500)
@@ -569,14 +532,14 @@ def create_token(*args, **kwargs):
 
     if errors:
         return render_template("new_token.html", errors=errors)
-
+    user = auth.current_user()
     client = auth.Client.from_dict(dict(name=request.form.get('name'),
-                                        user_id=session['user'],
+                                        user_id=user,
                                         client_type='public',
                                         redirect_uris='http://localhost',
                                         client_id="%s@datasets.sunet.se" % random_string(32),
                                         client_secret=random_string(32))).save()
-    rc.sadd("user|%s|clients" % session['user'], client.client_id)
+    rc.sadd("user|%s|clients" % user, client.client_id)
     token = auth.Token.from_dict(dict(client_id=client.client_id,
                                       user_id=client.user_id,
                                       token_type='bearer',
@@ -585,7 +548,7 @@ def create_token(*args, **kwargs):
                                       scopes=" ".join(
                                           [x.encode('ascii') for x in request.form.getlist('scopes')]))).save()
     print "saved token %s" % repr(token)
-    rc.sadd("user|%s|tokens" % session['user'], token.token_id)
+    rc.sadd("user|%s|tokens" % user, token.token_id)
     return redirect("/oauth/tokens")
 
 
@@ -625,14 +588,15 @@ def create_client(*args, **kwargs):
     if errors:
         return render_template('new_client.html', **errors)
 
+    user = auth.current_user()
     data.update(dict(name=request.form.get('name'),
-                     user_id=session['user'],
+                     user_id=user,
                      redirect_uris=" ".join([x.encode('ascii') for x in request.form.getlist('request_uris')]),
                      client_id="%s@datasets.sunet.se" % random_string(32),
                      client_secret=random_string(32)))
 
     client = auth.Client.from_dict(data).save()
-    rc.sadd("user|%s|clients" % session['user'], client.client_id)
+    rc.sadd("user|%s|clients" % user, client.client_id)
 
     return redirect("/oauth/clients")
 
@@ -648,7 +612,7 @@ def list_client():
 @app.route('/oauth/tokens', methods=['GET'])
 @auth.requires_auth
 def list_tokens():
-    tokens = [auth.get_token(token_id) for token_id in rc.smembers("user|%s|tokens" % session['user']) if
+    tokens = [auth.get_token(token_id) for token_id in rc.smembers("user|%s|tokens" % auth.current_user()) if
               token_id is not None]
     return render_template("tokens.html", tokens=tokens)
 
@@ -658,7 +622,7 @@ def list_tokens():
 def remove_client(client_id):
     if client_id is None:
         abort(400)
-    rc.srem("user|%s|clients" % session['user'], client_id)
+    rc.srem("user|%s|clients" % auth.current_user(), client_id)
     client = auth.get_client(client_id)
     if client is not None:
         client.delete()
@@ -670,7 +634,7 @@ def remove_client(client_id):
 def remove_token(token_id):
     if token_id is None:
         abort(400)
-    rc.srem("user|%s|tokens" % session['user'], token_id)
+    rc.srem("user|%s|tokens" % auth.current_user(), token_id)
     token = auth.get_token(token_id)
     if token is not None:
         token.delete()
@@ -721,7 +685,7 @@ def load_grant(client_id, code):
 def save_grant(client_id, code, r, *args, **kwargs):
     if not auth.is_authenticated(session):
         abort(400)
-    return auth.save_grant(session['user'], client_id, code, r, args, kwargs)
+    return auth.save_grant(auth.current_user(), client_id, code, r, args, kwargs)
 
 
 if __name__ == "__main__":
