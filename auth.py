@@ -2,8 +2,9 @@ from functools import wraps
 from flask import redirect, request, session
 from hashlib import sha1
 from datetime import datetime, timedelta
-from utils import totimestamp
+from utils import totimestamp, AuthException
 from redis import Redis
+import time
 
 __author__ = 'leifj'
 
@@ -31,6 +32,14 @@ def _fromtimestamp(ts):
     if ts:
         return datetime.fromtimestamp(float(ts))
     return None
+
+
+def current_user():
+    if 'user' in session:
+        return session['user']
+    if hasattr(request, 'oauth'):
+        return request.oauth.user
+    raise AuthException("not authenticated")
 
 # OAUTH2 model
 
@@ -106,7 +115,7 @@ class Client():
     def tokens(self):
         for tid in rc.smembers("%s|tokens" % self.client_name):
             if tid is not None:
-                yield get_token(tid)
+                yield Token.from_dict(rc.hgetall("oauth2|token|%s" % tid))
 
 
 def _client_name(cid):
@@ -193,6 +202,8 @@ class Token(object):
         if not data:
             return None
 
+        print data
+
         if 'scopes' in data:
             data['scopes'] = data.pop('scopes').split()
         if 'expires' in data:
@@ -204,7 +215,10 @@ class Token(object):
 
         return Token(**data)
 
-    def __init__(self, client_id, user_id, token_type='bearer', access_token='', refresh_token='', expires='', scopes=[], personal=False):
+    def __init__(self, client_id, user_id, token_type='bearer', access_token='', refresh_token='', expires=None, scopes=[], personal=False):
+        if expires is None:
+            expires = datetime.utcnow() + timedelta(days=30)
+
         self.client_id = client_id
         self.user_id = user_id
         self.token_type = token_type
@@ -268,10 +282,11 @@ def get_token(tid):
 
 
 def load_token(access_token=None, refresh_token=None):
+    print access_token
     if access_token is not None:
-        return get_token(rc.get("oauth2|token|access|%s" % access_token))
+        return Token.from_dict(rc.hgetall(rc.get("oauth2|token|access|%s" % access_token)))
     if refresh_token is not None:
-        return get_token(rc.get("oauth2|token|refresh|%s" % refresh_token))
+        return Token.from_dict(rc.hgetall(rc.get("oauth2|token|refresh|%s" % refresh_token)))
 
 
 def save_token(token, req, *args, **kwargs):
