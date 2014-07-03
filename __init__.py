@@ -23,7 +23,7 @@ import time
 from redis_session import RedisSessionInterface
 import tracker
 import logging
-from utils import request_wants_json, random_string, APIException, AppException
+from utils import request_wants_json, random_string, APIException, AppException, PermissionDenied
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
@@ -237,7 +237,10 @@ def del_torrent(info_hash):
         else:
             return redirect("/datasets")
     else:
-        abort(401)
+        if request_wants_json():
+            raise PermissionDenied()
+        else:
+            abort(401)
 
 
 @app.route('/api/dataset/<regex("[a-f0-9]+"):info_hash>/permissions', methods=['GET'])
@@ -449,10 +452,9 @@ def logout():
     return redirect("/")
 
 
-@app.errorhandler(APIException)
+@app.errorhandler(AppException)
 def handle_invalid_usage(err):
-    traceback.print_exc()
-    response = jsonify(err.to_dict())
+    response = jsonify(dict(status=err.status_code, error=err.to_dict()))
     response.status_code = err.status_code
     return response
 
@@ -692,6 +694,12 @@ def save_grant(client_id, code, r, *args, **kwargs):
         abort(400)
     return auth.save_grant(auth.current_user(), client_id, code, r, args, kwargs)
 
+@oauth.aborter
+def _abort(status_code):
+    if status_code == 401:
+        raise PermissionDenied()
+
+    raise APIException(status_code=status_code)
 
 if __name__ == "__main__":
     app.run()

@@ -37,12 +37,19 @@ def get_from_qs(qs, key):
 
 
 class AppException(Exception):
-    status_code = 400
 
-    def __init__(self, message, status_code=None, payload=None):
+    def default_status_code(self):
+        return 400
+
+    def default_message(self):
+        return "An error occured"
+
+    def __init__(self, message=None, status_code=None, payload=None):
         Exception.__init__(self)
-        self.message = message
-        if status_code is not None:
+        self.message = self.default_message()
+        if status_code is None:
+            self.status_code = self.default_status_code()
+        else:
             self.status_code = status_code
         self.payload = payload
 
@@ -57,4 +64,15 @@ class APIException(AppException):
 
 
 class AuthException(AppException):
-    pass
+    def default_status_code(self):
+        return 403
+
+
+class PermissionDenied(AuthException):
+    def default_message(self):
+        return "Permission denied"
+
+    def default_status_code(self):
+        return 403
+
+
