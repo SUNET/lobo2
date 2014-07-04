@@ -4,6 +4,7 @@ babel
 Flask-Negotiate
 flask-autodoc
 flask-oauthlib
+flask-gravatar
 pillow
 gunicorn
 pyrss2gen

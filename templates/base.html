@@ -23,7 +23,7 @@
             {% endif %}
             <li><a href="/datasets">All Datasets</a></li>
             {% if session is authenticated %}
-            <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown">{{ '_name'|user_attribute }}<span class="caret"></span></a>
+            <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown"><img class="img-responsive gravatar" src="{{ 'mail'|user_attribute|gravatar }}"/>{{ '_name'|user_attribute }}<span class="caret"></span></a>
                 <ul class="dropdown-menu" role="menu">
                     <li><a href="/me">Profile</a></li>
                     <li class="divider"></li>

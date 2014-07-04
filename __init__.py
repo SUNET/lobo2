@@ -7,6 +7,7 @@ import PyRSS2Gen
 from babel.dates import format_datetime
 from flask import Flask, Response, request, session, render_template, redirect, abort, jsonify, url_for
 from flask.ext.autodoc import Autodoc
+from flask.ext.gravatar import Gravatar
 from flask.ext.negotiate import produces, consumes
 from flask.ext.oauthlib.provider import OAuth2Provider
 import re
@@ -32,6 +33,14 @@ app.secret_key = app.config.get("SECRET")
 app.session_interface = RedisSessionInterface()
 docs = Autodoc(app)
 oauth = OAuth2Provider(app)
+
+gravatar = Gravatar(app,
+                    size=25,
+                    rating='g',
+                    default='retro',
+                    force_default=False,
+                    use_ssl=True,
+                    base_url=None)
 
 mimetypes.add_type('application/x-bittorrent', '.torrent')
 

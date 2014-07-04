@@ -157,3 +157,9 @@ input.edit-name {
 a.home-link:hover {
     text-decoration: none;
 }
+
+img.gravatar {
+    margin-right: 4px;
+    display: inline;
+    vertical-align: middle;
+}
