@@ -432,7 +432,7 @@ app.jinja_env.tests['permission'] = has_perm
 
 
 def _user_name(data, uid):
-    name = uid
+    name = [uid]
     if 'displayName' in data:
         name = data['displayName']
     elif 'givenName' and 'sn' in data:
@@ -454,14 +454,14 @@ def login():
         user = app.config.get('AUTH_TEST')  # test login - just for debugging
 
     if user is not None:
-        user_data = json.loads(rc.hgetall("user|%s|attributes" % user))
+        user_data = dict([(a, v.split(';')) for a, v in rc.hgetall("user|%s|attributes" % user).iteritems()])
         for an in re.split("\s|(?<!\d)[,.](?!\d)", app.config.get("USER_ATTRIBUTES", "")):
             av = request.environ.get(an, '').split(';')
             user_data[an] = av
 
         user_data['_name'] = _user_name(user_data, user)
 
-        rc.hmset("user|%s|attributes" % user, json.dumps(user_data))
+        rc.hmset("user|%s|attributes" % user, dict([(a, ';'.join(v)) for a, v in user_data.iteritems()]))
         rc.sadd("users", user)
         session['user'] = user
         session['user_info'] = user_data
