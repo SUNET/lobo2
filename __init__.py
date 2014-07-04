@@ -454,14 +454,14 @@ def login():
         user = app.config.get('AUTH_TEST')  # test login - just for debugging
 
     if user is not None:
-        user_data = rc.hgetall("user|%s|attributes" % user)
+        user_data = json.loads(rc.hgetall("user|%s|attributes" % user))
         for an in re.split("\s|(?<!\d)[,.](?!\d)", app.config.get("USER_ATTRIBUTES", "")):
             av = request.environ.get(an, '').split(';')
             user_data[an] = av
 
-        user_data['_name'] = [_user_name(user_data, user)]
+        user_data['_name'] = _user_name(user_data, user)
 
-        rc.hmset("user|%s|attributes" % user, user_data)
+        rc.hmset("user|%s|attributes" % user, json.dumps(user_data))
         rc.sadd("users", user)
         session['user'] = user
         session['user_info'] = user_data
