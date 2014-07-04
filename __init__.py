@@ -455,7 +455,7 @@ def login():
 
     if user is not None:
         user_data = rc.hgetall("user|%s|attributes" % user)
-        for an in re.split('\s|(?<!\d)[,.](?!\d)', app.config("USER_ATTRIBUTES")):
+        for an in re.split('\s|(?<!\d)[,.](?!\d)', app.config.get("USER_ATTRIBUTES")):
             av = request.environ.get(an, '').split(';')
             user_data[an] = av
 
