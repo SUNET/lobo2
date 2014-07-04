@@ -455,7 +455,7 @@ def login():
 
     if user is not None:
         user_data = rc.hgetall("user|%s|attributes" % user)
-        for an in re.split('\s|(?<!\d)[,.](?!\d)', app.config.get("USER_ATTRIBUTES")):
+        for an in re.split("\s|(?<!\d)[,.](?!\d)", app.config.get("USER_ATTRIBUTES")):
             av = request.environ.get(an, '').split(';')
             user_data[an] = av
 
@@ -464,6 +464,7 @@ def login():
         rc.hmset("user|%s|attributes" % user, user_data)
         rc.sadd("users", user)
         session['user'] = user
+        session['user_data'] = user_data
         return redirect(redirect_to)
 
     abort(401)
@@ -473,6 +474,7 @@ def login():
 def logout():
     if 'user' in session:
         del session['user']
+        del session['user_data']
     return redirect("/")
 
 
