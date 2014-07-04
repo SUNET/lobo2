@@ -9,6 +9,7 @@ from flask import Flask, Response, request, session, render_template, redirect, 
 from flask.ext.autodoc import Autodoc
 from flask.ext.negotiate import produces, consumes
 from flask.ext.oauthlib.provider import OAuth2Provider
+import re
 from redis import Redis
 import os
 import random
@@ -438,7 +439,11 @@ def login():
         user = app.config.get('AUTH_TEST')  # test login - just for debugging
 
     if user is not None:
-        print request.headers
+        user_data = rc.hgetall("user|%s|attributes" % user)
+        for an in re.split('\s|(?<!\d)[,.](?!\d)', app.config("USER_ATTRIBUTES")):
+            av = request.environ.get(an, '').split(';')
+            user_data[an] = av
+        rc.hmset("user|%s|attributes" % user, user_data)
         rc.sadd("users", user)
         session['user'] = user
         return redirect(redirect_to)
