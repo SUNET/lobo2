@@ -24,7 +24,7 @@
             {% endif %}
             <li><a href="/datasets">All Datasets</a></li>
             {% if session is authenticated %}
-            <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown">{{ session['user_data'] }}<span class="caret"></span></a>
+            <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown">{{ session['user_data']['_name'] }}<span class="caret"></span></a>
                 <ul class="dropdown-menu" role="menu">
                     <li><a href="/me">Profile</a></li>
                     <li class="divider"></li>
