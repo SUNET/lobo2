@@ -431,6 +431,21 @@ def has_perm(info_hash, perm):
 app.jinja_env.tests['permission'] = has_perm
 
 
+def _user_name(data, uid):
+    name = uid
+    if 'displayName' in data:
+        name = data['displayName']
+    elif 'givenName' and 'sn' in data:
+        name = "%s %s" % (data['givenName'], data['sn'])
+    elif 'cn' in data:
+        name = data['cn']
+    elif 'sn' in data:
+        name = "%s (%s)" % (data['sn'], uid)
+    elif 'givenName' in data:
+        name = "%s (%s)" % (data['givenName'], uid)
+
+    return name
+
 @app.route("/login")
 def login():
     redirect_to = request.args.get('next', "/")
@@ -443,6 +458,9 @@ def login():
         for an in re.split('\s|(?<!\d)[,.](?!\d)', app.config("USER_ATTRIBUTES")):
             av = request.environ.get(an, '').split(';')
             user_data[an] = av
+
+        user_data['_name'] = _user_name(user_data, user)
+
         rc.hmset("user|%s|attributes" % user, user_data)
         rc.sadd("users", user)
         session['user'] = user
