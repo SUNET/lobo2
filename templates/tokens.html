@@ -18,32 +18,70 @@
 
 {% if tokens %}
     {% for token in tokens %}
-    <div class="panel panel-default">
+    <div class="panel panel-default" id="{{ token.token_id }}">
         <div class="panel-heading">
-            {{ token.client.name }}
+            <span class="name">{{ token.client.name }}</span>
+            &nbsp;<a href="#" class="edit-name" data-object="{{ token.token_id }}"><span class="glyphicon glyphicon-edit"></span></a>
 
             <div class="toolbar pull-right">
                 <a role="button" class="btn btn-danger btn-xs" data-toggle="modal" data-target="#confirm-delete" href="#" data-href="/oauth/token/{{ token.token_id }}/remove">Remove token</a></li>
-                <button class="btn btn-warning btn-xs show-secret" data-href="#{{ token.token_id }}">Show secret</button>
+                <button class="btn btn-warning btn-xs show-secret" data-object="{{ token.token_id }}">Show secret</button>
             </div>
         </div>
         <div class="panel-body">
-            <div class="secret starthidden" id="{{ token.token_id }}">
-                <dl>
-                    <dt>access token</dt><dd>{{ token.access_token }}</dd>
-                    {% if token.refresh_token %}
-                    <dt>refresh token</dt><dd>{{ token.refresh_token }}</dd>
-                    {% endif %}
-                </dl>
-            </div>
-            <dl>
-                <dt>scopes</dt>
-                <dd>{{ token.scopes|join(" ") }}</dd>
-                {% if token.expires %}
-                <dt>expires</dt>
-                <dd>{{ token.expires }}</dd>
+            <table class="table table-condensed">
+                <tr class="secret starthidden">
+                    <th>access token</th><td>{{ token.access_token }}</td>
+                </tr>
+                {% if token.refresh_token %}
+                <tr class="secret starthidden">
+                    <th>refresh token</th><td>{{ token.refresh_token }}</td>
+                </tr>
                 {% endif %}
-            </dl>
+                <tr>
+                    <th>scopes</th>
+                    <td class="scopes"><span>{{ token.scopes|join(" ") }}</span>
+                        &nbsp;<a href="#" class="edit-scopes" data-object="{{ token.token_id }}"><span class="glyphicon glyphicon-edit"></span></a></td>
+                </tr>
+                <tr class="scope-panel starthidden">
+                    <td colspan="2">
+                        <div class="panel panel-default">
+                            <div class="panel-body">
+                                <form role="form">
+                                    <div class="form-group">
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="scopes" value="dataset:create"/> dataset:create
+                                        </label>
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="scopes" value="dataset:delete"/> dataset:delete
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="scopes" value="dataset:permission:list"/> dataset:permission:list
+                                        </label>
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="scopes" value="dataset:permission:add"/> dataset:permission:add
+                                        </label>
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="scopes" value="dataset:permission:remove"/> dataset:permission:remove
+                                        </label>
+                                    </div>
+                                    <p class="help-block form-field-description">Select scopes to the minimal set of permissions your application needs.</p>
+                                </form>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% if token.expires %}
+                <tr>
+                    <th>expires</th>
+                    <td class="expires"><span>{{ token.expires }}</span>
+                    &nbsp;<a href="#" class="renew-token" data-object="{{ token.token_id }}"><span class="glyphicon glyphicon-refresh"></span></a>
+                    </td>
+                </tr>
+                {% endif %}
+            </table>
         </div>
     </div>
     {% endfor %}
@@ -78,17 +116,85 @@ $(function() {
     });
 
     $('button.show-secret').on('click',function(e) {
-        console.log($(this).attr('data-href'));
-        var elt = $($(this).attr('data-href'));
-        console.log(elt);
+        var tid = $(this).attr('data-object');
+        var elt = $("#"+tid).find("tr.secret");
         if ($(this).hasClass("btn-warning")) {
             $(this).removeClass("btn-warning").addClass("btn-default").text("Hide secret")
-            $(elt).show();
         } else {
             $(this).removeClass("btn-default").addClass("btn-warning").text("Show secret")
-            $(elt).hide();
+        }
+        $(elt).toggle('slow');
+    });
+
+    $('.edit-name').on('click',function(e) {
+        var tid = $(this).attr('data-object');
+        var sp = $(this).find("span.glyphicon");
+        if ($(sp).hasClass('glyphicon-edit')) {
+            $(sp).removeClass('glyphicon-edit');
+            var cur_name = $("#"+tid).find('span.name').text();
+            $("#"+tid).find('span.name').replaceWith($("<input>").attr('type','text').attr('value',cur_name).attr('size',20).addClass('input-sm').addClass('edit-name').addClass("form-control"));
+            $(sp).addClass('glyphicon-check');
+        } else {
+            $(sp).removeClass('glyphicon-check');
+            var en = $("#"+tid).find("input.edit-name");
+            $.ajax({url:"/oauth/token/"+tid,
+                    type: 'POST',
+                    data: JSON.stringify({'client_name': en.val()}),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    success: function(data) {
+                        console.log(data);
+                        en.replaceWith($("<span>").addClass("name").text(data['client_name']));
+                    }
+            });
+            $(sp).addClass('glyphicon-edit');
         }
     });
+
+    $('.edit-scopes').on('click',function(e) {
+        var tid = $(this).attr('data-object');
+        var elt = $("#"+tid).find('tr.scope-panel');
+        var sp = $(this).find("span");
+        if ($(sp).hasClass('glyphicon-edit')) {
+            $(sp).removeClass('glyphicon-edit');
+            var cur_scopes = $("#"+tid).find('td.scopes > span').text().split(" ");
+            for (var i in cur_scopes) {
+                $("#"+tid).find("input[type='checkbox'][value='"+cur_scopes[i]+"']").prop('checked',true);
+            }
+            $(elt).toggle('slow');
+            $(sp).addClass('glyphicon-check');
+        } else {
+            $(elt).toggle('slow');
+            $(sp).removeClass('glyphicon-check');
+            var new_scopes = [];
+            $("#"+tid).find('input:checked').each(function(idx,s) {
+                new_scopes.push($(s).attr('value'));
+            });
+            $.ajax({url:"/oauth/token/"+tid,
+                    type: 'POST',
+                    data: JSON.stringify({'scopes': new_scopes}),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    success: function(data) {
+                        var e = $("#"+tid).find('td.scopes > span');
+                        e.text(data['scopes']);
+                    }
+            });
+            $(sp).addClass('glyphicon-edit');
+        }
+
+    });
+
+    $('.renew-token').on('click',function(e) {
+        var tid = $(this).attr('data-object');
+        var elt = $("#"+tid).find('td.expires > span');
+        console.log(elt);
+        $.getJSON("/oauth/token/"+tid+"/renew",function(data) {
+            elt.text(data['expires_txt']);
+        });
+    });
+
+
 
 });
 {% endblock %}

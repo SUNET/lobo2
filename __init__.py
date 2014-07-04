@@ -7,7 +7,7 @@ import PyRSS2Gen
 from babel.dates import format_datetime
 from flask import Flask, Response, request, session, render_template, redirect, abort, jsonify, url_for
 from flask.ext.autodoc import Autodoc
-from flask.ext.negotiate import produces
+from flask.ext.negotiate import produces, consumes
 from flask.ext.oauthlib.provider import OAuth2Provider
 from redis import Redis
 import os
@@ -18,12 +18,12 @@ from werkzeug.contrib.atom import AtomFeed
 from werkzeug.routing import BaseConverter
 import auth
 from torrenttools import bencode, bdecode
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from redis_session import RedisSessionInterface
 import tracker
 import logging
-from utils import request_wants_json, random_string, APIException, AppException, PermissionDenied
+from utils import request_wants_json, random_string, APIException, AppException, PermissionDenied, totimestamp
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
@@ -402,7 +402,7 @@ def _announce():
 
 @app.before_request
 def csrf_protect():
-    if request.method == "POST" and not 'api' in request.url:
+    if request.method == "POST" and not 'api' in request.url and not 'application/json' in request.content_type:
         token = session.pop('_csrf_token', None)
         if not token or token != request.form.get('_csrf_token'):
             abort(403)
@@ -438,6 +438,7 @@ def login():
         user = app.config.get('AUTH_TEST')  # test login - just for debugging
 
     if user is not None:
+        print request.headers
         rc.sadd("users", user)
         session['user'] = user
         return redirect(redirect_to)
@@ -558,6 +559,45 @@ def create_token(*args, **kwargs):
     rc.sadd("user|%s|tokens" % user, token.token_id)
     return redirect("/oauth/tokens")
 
+@app.route("/oauth/token/<token_id>/renew", methods=["GET"])
+@auth.requires_auth
+def renew_token(token_id):
+    token = auth.get_token(token_id)
+    if token is None:
+        abort(404)
+
+    token.expires += timedelta(days=30)
+    token.save()
+
+    return jsonify(dict(token_id=token_id, expires_ts=totimestamp(token.expires), expires_txt="%s" % token.expires))
+
+@app.route("/oauth/token/<token_id>", methods=['GET', 'POST'])
+@auth.requires_auth
+@consumes('application/json')
+def token_scopes(token_id):
+    token = auth.get_token(token_id)
+    if token is None:
+        abort(404)
+
+    data = request.get_json()
+    if request.method == 'POST':
+        client = token.client
+        if 'scopes' in data:
+            token.scopes = [x.encode('ascii') for x in data.get('scopes')]
+        if 'client_name' in data and token.personal:
+            print "setting client name to %s" % data.get('client_name')
+            client.name = data.get('client_name')
+
+        if token.personal:
+            print "saving %s" % token.client.client_name
+            client.save()
+        token.save()
+
+    d = token.to_dict()
+    if token.personal:
+        d.update(dict(client_name=token.client.name))
+
+    return jsonify(d)
 
 @app.route('/oauth/client/new', methods=['GET', 'POST'])
 @auth.requires_auth

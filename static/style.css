@@ -139,3 +139,17 @@ li.token {
 #torrent-form {
     width: 100%;
 }
+
+.scopes {
+    width: 98%;
+}
+
+.table > tbody > tr> th, .table > tbody > tr > td {
+     border: none;
+ }
+
+input.edit-name {
+    width: 15em;
+    display: inline;
+    padding: 0 0 2px 2px;
+}
