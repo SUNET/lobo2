@@ -153,3 +153,7 @@ input.edit-name {
     display: inline;
     padding: 0 0 2px 2px;
 }
+
+a.home-link:hover {
+    text-decoration: none;
+}

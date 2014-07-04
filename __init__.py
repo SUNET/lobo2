@@ -455,16 +455,16 @@ def login():
 
     if user is not None:
         user_data = rc.hgetall("user|%s|attributes" % user)
-        for an in re.split("\s|(?<!\d)[,.](?!\d)", app.config.get("USER_ATTRIBUTES")):
+        for an in re.split("\s|(?<!\d)[,.](?!\d)", app.config.get("USER_ATTRIBUTES", "")):
             av = request.environ.get(an, '').split(';')
             user_data[an] = av
 
-        user_data['_name'] = _user_name(user_data, user)
+        user_data['_name'] = [_user_name(user_data, user)]
 
         rc.hmset("user|%s|attributes" % user, user_data)
         rc.sadd("users", user)
         session['user'] = user
-        session['user_data'] = user_data
+        session['user_info'] = user_data
         return redirect(redirect_to)
 
     abort(401)
@@ -474,6 +474,7 @@ def login():
 def logout():
     if 'user' in session:
         del session['user']
+    if 'user_data' in session:
         del session['user_data']
     return redirect("/")
 
@@ -512,6 +513,18 @@ def _format_datetime(value, fmt='medium'):
 def _path_to_file(value):
     return os.path.join(*value).decode("utf-8")
 
+@app.template_filter("user_attribute")
+def _user_attribute(name):
+    if name == 'user':
+        return session['user']
+
+    if not 'user_info' in session:
+        return ''
+
+    if name in session['user_info']:
+        return session['user_info'][name][0]
+    else:
+        return ''
 
 ## RSS & ATOM Feeds
 

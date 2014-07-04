@@ -18,13 +18,12 @@
 <div class="container">
     <div class="header">
         <ul class="nav nav-pills pull-right">
-            <li><a href="/">Home</a></li>
             {% if session is authenticated %}
             <li><a href="/dataset/new">Add Dataset</a></li>
             {% endif %}
             <li><a href="/datasets">All Datasets</a></li>
             {% if session is authenticated %}
-            <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown">{{ session['user_data']['_name'] }}<span class="caret"></span></a>
+            <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown">{{ '_name'|user_attribute }}<span class="caret"></span></a>
                 <ul class="dropdown-menu" role="menu">
                     <li><a href="/me">Profile</a></li>
                     <li class="divider"></li>
@@ -35,7 +34,7 @@
             <li><a href="/login">Login</a></li>
             {% endif %}
         </ul>
-        <h3 class="text-muted">SUNET Datasets</h3>
+        <a class="home-link" href="/"><h3 class="text-muted">SUNET Datasets</h3></a>
     </div>
     <div id="content">{% block content %}{% endblock %}</div>
     <div class="footer">
@@ -73,6 +72,9 @@
     <script src="/static/jstorage.js"></script>
     <script>
         $(function() {
+           $('.home').click(function() {
+               location.href = "/";
+           });
            $('button.closer').on('click',function(e) {
                 var closed = $.jStorage.get('lobo2.closed.messages',{});
                 $(this).closest('div.message').each(function(idx, elt) {
