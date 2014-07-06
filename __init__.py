@@ -151,9 +151,9 @@ def _add_torrent():
 @produces('application/json')
 def _new_torrent_json():
     """
-    Creates a new dataset by POST:ing (multipart/form-data) a form with a single argument 'torrent' containing a
-    BitTorrent metadata file describing the dataset. The 'announce' item in the torrent file will be replace by the tracker
-    in the service. Returns the newly created info_hash (hex encoded)
+    Creates a new dataset by POST:ing (multipart/form-data) a form with a single field named 'torrent' containing a
+    BitTorrent metadata file describing the dataset. The 'announce' item in the torrent file will be replace by the
+    tracker in the service. Returns the newly created info_hash (hex encoded)
     """
     info_hash = add_torrent()
     return jsonify(dict(info_hash=info_hash))
