@@ -12,7 +12,7 @@
         {% for an in session['user_info'] %}
             {% if an != '_name' %}
                 <dt>{{ an }}</dt>
-                <dd>{{ session['user_data'][an] }}</dd>
+                <dd>{{ session['user_info'][an] }}</dd>
             {% endif %}
         {% endfor %}
     </dl>
