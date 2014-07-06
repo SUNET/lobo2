@@ -3,26 +3,33 @@
 
     <h1 class="page-header">{{ '_name'|user_attribute }}</h1>
 
-    <div class="buttons pull-right" role="toolbar">
-        <a href="/oauth/clients" role="button" class="btn btn-info btn-xs">My Registered Applications</a>
-        <a href="/oauth/tokens" role="button" class="btn btn-info btn-xs">My Access Tokens</a>
-    </div>
 
-    {% if 'user_info' in session and session['user_info'] %}
-    <dl class="dl-horizontal">
-        {% for an in session['user_info'] %}
-            {% if an != '_name' %}
-                <dt>{{ an }}</dt>
-                <dd>
-                    <ul class="list-unstyled">
-                    {% for v in  session['user_info'][an] %}
-                        <li>{{ v }}</li>
-                    {% endfor %}
-                    </ul>
-                </dd>
+
+    <div class="row">
+        <div class="col-md-8">
+            {% if 'user_info' in session and session['user_info'] %}
+            <dl class="dl-horizontal">
+                {% for an in session['user_info'] %}
+                    {% if an != '_name' %}
+                        <dt>{{ an }}</dt>
+                        <dd>
+                            <ul class="list-unstyled">
+                            {% for v in  session['user_info'][an] %}
+                                <li>{{ v }}</li>
+                            {% endfor %}
+                            </ul>
+                        </dd>
+                    {% endif %}
+                {% endfor %}
+            </dl>
             {% endif %}
-        {% endfor %}
-    </dl>
-    {% endif %}
+        </div>
+        <div class="col-md-4">
+            <ul class="nav nav-pills nav-stacked">
+                <li><a href="/oauth/clients">My Registered Applications</a></li>
+                <li><a href="/oauth/tokens">My Access Tokens</a></li>
+            </ul>
+        </div>
+    </div>
 
 {% endblock %}
