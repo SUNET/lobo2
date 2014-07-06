@@ -73,6 +73,7 @@ def trackerdocs():
 
 
 @app.route("/me")
+@auth.requires_auth
 def profile():
     return render_template("profile.html")
 
@@ -466,7 +467,8 @@ def login():
         user_data = dict([(a, v.split(';')) for a, v in rc.hgetall("user|%s|attributes" % user).iteritems()])
         for an in re.split("\s|(?<!\d)[,.](?!\d)", app.config.get("USER_ATTRIBUTES", "")):
             av = request.environ.get(an, '').split(';')
-            user_data[an] = av
+            if an:
+                user_data[an] = av
 
         user_data['_name'] = _user_name(user_data, user)
 

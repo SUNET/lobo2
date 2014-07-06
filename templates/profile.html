@@ -1,11 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
 
-    <h1 class="page-header">{{ session.user }}</h1>
+    <h1 class="page-header">{{ '_name'|user_attribute }}</h1>
 
     <div class="buttons" role="toolbar">
-        <a href="/oauth/clients" role="button" class="btn btn-default">My Registered Applications</a>
-        <a href="/oauth/tokens" role="button" class="btn btn-default">My Access Tokens</a>
+        <a href="/oauth/clients" role="button" class="btn btn-default btn-sm">My Registered Applications</a>
+        <a href="/oauth/tokens" role="button" class="btn btn-default btn-sm">My Access Tokens</a>
     </div>
+
+    <dl class="ul-horizontal">
+        {% for an in session['user_info'] %}
+            {% if an != '_name' %}
+                <dt>{{ an }}</dt>
+                <dd>{{ session['user_data'][an] }}</dd>
+            {% endif %}
+        {% endfor %}
+    </dl>
 
 {% endblock %}
