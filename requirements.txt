@@ -8,4 +8,3 @@ flask-gravatar
 pillow
 gunicorn
 pyrss2gen
-pillow
