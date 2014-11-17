@@ -3,7 +3,7 @@ redis
 babel
 Flask-Negotiate
 flask-autodoc
-flask-oauthlib
+git+git://github.com/leifj/flask-oauthlib.git#egg=flask-oauthlib
 flask-gravatar
 pillow
 gunicorn
