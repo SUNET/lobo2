@@ -13,7 +13,7 @@ install_requires = open(os.path.join(here,"requirements.txt")).readline()
 setup(name='lobo2',
       version=version,
       description="SUNET datasets",
-      long_description=README + '\n\n' + NEWS,
+      long_description=README,
       classifiers=[
           # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       ],
@@ -30,7 +30,7 @@ setup(name='lobo2',
       include_package_data=True,
       package_data={
           'lobo2': ['templates/*.html',
-                    'static/**/*',
+                    'static/**/*'],
       },
       zip_safe=False,
       install_requires=install_requires,
