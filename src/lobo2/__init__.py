@@ -30,7 +30,6 @@ from utils import request_wants_json, random_string, APIException, AppException,
 app = Flask(__name__)
 app.config.from_pyfile(os.path.join(os.getcwd(), 'config.py'))
 app.secret_key = os.urandom(24)
-app.session_interface = RedisSessionInterface()
 docs = Autodoc(app)
 oauth = OAuth2Provider(app)
 
@@ -49,6 +48,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 rc = StrictRedis(host=app.config.get("REDIS_HOST", 'localhost'),
                  port=int(app.config.get("REDIS_PORT", "6379")))
+
+app.session_interface = RedisSessionInterface(redis=rc)
 
 PAGECOUNT = 10
 NLAST = 99
