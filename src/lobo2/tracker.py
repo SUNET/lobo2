@@ -9,7 +9,6 @@ from redis import Redis
 from urllib import unquote
 from ctypes import create_string_buffer
 from torrenttools import bencode
-from . import rc
 
 INTERVAL = 30
 DEFNUMWANT = 50
@@ -71,11 +70,11 @@ def get_peers(rc, info_hash, numwant=0):
     return peers
 
 
-def json_scrape(info_hash):
-    return jsonify(scrape_info(info_hash, INTERVAL))
+def json_scrape(rc, info_hash):
+    return jsonify(scrape_info(rc, info_hash, INTERVAL))
 
 
-def scrape_info(info_hash, interval):
+def scrape_info(rc, info_hash, interval):
     scrape_data = rc.hgetall("scrape|%s" % info_hash)
     if scrape_data is None or not len(scrape_data):
         count = 0
@@ -98,7 +97,7 @@ def scrape_info(info_hash, interval):
     return scrape_data
 
 
-def scrape():
+def scrape(rc):
     """
     The tracker scrape endpoint: https://wiki.theory.org/BitTorrentSpecification.
     """
@@ -128,7 +127,7 @@ def _update_stats(pi, info_hash, my_pid, now):
         p.zadd("torrents|seen", info_hash, now)
 
 
-def announce():
+def announce(rc):
     """
     The tracker announce endpoint: https://wiki.theory.org/BitTorrentSpecification
     """

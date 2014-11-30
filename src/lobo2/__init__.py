@@ -87,7 +87,7 @@ def json_scrape(info_hash):
     Returns a json-dict with 3 integer items: completed, downloaded and incomplete representing the same information
     that is available in the BT scrape protocol.
     """
-    return tracker.json_scrape(info_hash)
+    return tracker.json_scrape(rc, info_hash)
 
 
 def add_torrent():
@@ -401,13 +401,13 @@ def torrent(info_hash):
 @docs.doc("tracker")
 @app.route("/scrape", methods=['GET'])
 def _scrape():
-    return tracker.scrape()
+    return tracker.scrape(rc)
 
 
 @docs.doc("tracker")
 @app.route("/announce", methods=['GET'])
 def _announce():
-    return tracker.announce()
+    return tracker.announce(rc)
 
 
 # # Infrastructure
