@@ -9,12 +9,11 @@ from redis import Redis
 from urllib import unquote
 from ctypes import create_string_buffer
 from torrenttools import bencode
+from . import rc
 
 INTERVAL = 30
 DEFNUMWANT = 50
 MAXNUMWANT = 20
-
-rc = Redis()
 
 
 def get_peer_address():
