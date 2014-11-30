@@ -30,6 +30,7 @@ setup(name='lobo2',
       include_package_data=True,
       package_data={
           'lobo2': ['templates/*.html',
+                    'static/*',
                     'static/**/*'],
       },
       zip_safe=False,
