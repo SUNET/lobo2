@@ -519,7 +519,7 @@ def _format_datetime(value, fmt='medium'):
         fmt = "EEEE, d. MMMM y 'at' HH:mm"
     elif fmt == 'medium':
         fmt = "EE dd.MM.y HH:mm"
-    return format_datetime(value, fmt. locale=locale)
+    return format_datetime(value, fmt, locale=locale)
 
 
 @app.template_filter("path_to_file")
