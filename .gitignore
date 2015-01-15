@@ -1,2 +1,4 @@
-*.pyc
+*.py
+*.egg
+*.egg-info
 .idea

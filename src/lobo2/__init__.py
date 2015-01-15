@@ -11,7 +11,6 @@ from flask.ext.gravatar import Gravatar
 from flask.ext.negotiate import produces, consumes
 from flask.ext.oauthlib.provider import OAuth2Provider
 import re
-from redis import Redis
 import os
 import random
 import string
@@ -26,6 +25,7 @@ from redis_session import RedisSessionInterface
 import tracker
 import logging
 from utils import request_wants_json, random_string, APIException, AppException, PermissionDenied, totimestamp
+import db
 
 app = Flask(__name__)
 app.config.from_pyfile(os.path.join(os.getcwd(), 'config.py'))
@@ -46,7 +46,7 @@ mimetypes.add_type('application/x-bittorrent', '.torrent')
 app.debug = True
 logging.basicConfig(level=logging.DEBUG)
 
-rc = Redis(host=app.config.get("REDIS_HOST", 'localhost'), port=int(app.config.get("REDIS_PORT", "6379")))
+rc = db.connection()
 
 app.session_interface = RedisSessionInterface(redis=rc)
 

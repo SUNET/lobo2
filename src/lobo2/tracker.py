@@ -5,10 +5,10 @@ import socket
 import struct
 import time
 from utils import get_from_qs, async
-from redis import Redis
 from urllib import unquote
 from ctypes import create_string_buffer
 from torrenttools import bencode
+import db
 
 INTERVAL = 30
 DEFNUMWANT = 50
@@ -114,7 +114,7 @@ def scrape(rc):
 
 @async
 def _update_stats(pi, info_hash, my_pid, now):
-    with Redis().pipeline() as p:
+    with db.connection().pipeline() as p:
         if pi.get('left', None) == 0:
             p.zadd("torrent|%s|seeders" % info_hash, my_pid, now)
             p.zrem("torrent|%s|leechers" % info_hash, my_pid)

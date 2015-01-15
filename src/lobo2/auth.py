@@ -3,7 +3,7 @@ from flask import redirect, request, session
 from hashlib import sha1
 from datetime import datetime, timedelta
 from utils import totimestamp, AuthException
-from redis import Redis
+import db
 
 __author__ = 'leifj'
 
@@ -43,7 +43,7 @@ def current_user():
 # OAUTH2 model
 
 
-rc = Redis()
+rc = db.connection()
 
 
 class Client():

@@ -3,7 +3,6 @@ __author__ = 'leifj'
 import pickle
 from datetime import timedelta
 from uuid import uuid4
-from redis import Redis
 from werkzeug.datastructures import CallbackDict
 from flask.sessions import SessionInterface, SessionMixin
 
@@ -25,7 +24,8 @@ class RedisSessionInterface(SessionInterface):
 
     def __init__(self, redis=None, prefix='session:'):
         if redis is None:
-            redis = Redis()
+            import db
+            redis = db.connection()
         self.redis = redis
         self.prefix = prefix
 
