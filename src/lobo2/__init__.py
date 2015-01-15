@@ -514,11 +514,12 @@ def error(e):
 
 @app.template_filter("strftime")
 def _format_datetime(value, fmt='medium'):
+    locale = app.config.get('LOCALE', 'en_US')
     if fmt == 'full':
         fmt = "EEEE, d. MMMM y 'at' HH:mm"
     elif fmt == 'medium':
         fmt = "EE dd.MM.y HH:mm"
-    return format_datetime(value, fmt)
+    return format_datetime(value, fmt, locale=locale)
 
 
 @app.template_filter("path_to_file")
