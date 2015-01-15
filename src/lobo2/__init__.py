@@ -5,7 +5,7 @@ import traceback
 from PIL import Image
 import PyRSS2Gen
 from babel.dates import format_datetime
-from flask import Flask, Response, request, session, render_template, redirect, abort, jsonify, url_for
+from flask import Response, request, session, render_template, redirect, abort, jsonify, url_for
 from flask.ext.autodoc import Autodoc
 from flask.ext.gravatar import Gravatar
 from flask.ext.negotiate import produces, consumes
@@ -26,10 +26,8 @@ import tracker
 import logging
 from utils import request_wants_json, random_string, APIException, AppException, PermissionDenied, totimestamp
 import db
+from app import app
 
-app = Flask(__name__)
-app.config.from_pyfile(os.path.join(os.getcwd(), 'config.py'))
-app.secret_key = os.urandom(24)
 docs = Autodoc(app)
 oauth = OAuth2Provider(app)
 
