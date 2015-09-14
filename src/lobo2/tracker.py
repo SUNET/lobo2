@@ -39,6 +39,11 @@ def pi_pack_peer(pi, buf4, buf6, offset):
     struct.pack_into(fmt, buf, offset, socket.inet_pton(family, pi.get('ip', None)), int(pi.get('port', None)))
     return alen
 
+def pi_ints(pi):
+    for key in ['left', 'downloaded', 'uploaded']:
+        if pi.get(key, None):
+            pi[key] = int(pi[key])
+    return(pi)
 
 def get_peers(rc, info_hash, numwant=0):
     peers = []
@@ -47,6 +52,7 @@ def get_peers(rc, info_hash, numwant=0):
         nleft = min(numwant, ntot)
         seen = dict()
         nseen = 0
+
         # print "start ntot=%d,nleft=%d,nseen=%d,sz=%d" % (ntot, nleft, nseen, len(peers))
         while nleft > 0 and ntot > nseen:
             #print "ntot=%d,nleft=%d,nseen=%d,sz=%d" % (ntot, nleft, nseen, len(peers))
@@ -56,6 +62,7 @@ def get_peers(rc, info_hash, numwant=0):
                     nseen += 1
                     pi = rc.hgetall(pid)
                     if pi is not None and len(pi) > 0:
+                        pi = pi_ints(pi)
                         peers.append(pi)
                         nleft -= 1
                     else:
@@ -81,7 +88,7 @@ def scrape_info(rc, info_hash, interval):
         downloaded = 0
         seeding = 0
         for pi in get_peers(rc, info_hash):
-            print pi
+            pi = pi_ints(pi)
             if pi.get('state', None) == 'started' or pi.get('state', None) == 'completed':
                 count += 1
                 if pi.get('left', None) == 0:
@@ -89,7 +96,7 @@ def scrape_info(rc, info_hash, interval):
 
                 if pi.get('state', None) == 'completed':
                     downloaded += 1
-
+        print("count")
         scrape_data = {'complete': seeding, 'downloaded': downloaded, 'incomplete': count - seeding}
         with rc.pipeline() as p:
             p.hmset("scrape|%s" % info_hash, scrape_data).expire("scrape|%s" % info_hash, interval).execute()
@@ -160,7 +167,6 @@ def announce(rc):
         v = request.args.get(key, None)
         if v is not None:
             pi[key] = v
-
     pi['port'] = port
     pi['ip'] = ip
     if event is not None:
@@ -190,7 +196,6 @@ def announce(rc):
         resp['peers'] = []
 
     for ppi in get_peers(rc, info_hash, numwant):
-        print ppi
         if ppi.get('state', None) == 'started' or ppi.get('state', None) == 'completed':
             count += 1
             if ppi.get('left', None) == 0:
@@ -203,12 +208,10 @@ def announce(rc):
                 offset += + pi_pack_peer(ppi, p4str, p6str, offset)
             else:
                 resp['peers'].append(pi_dict(ppi))
-
     resp['complete'] = seeding
     resp['downloaded'] = downloaded
     resp['incomplete'] = count - seeding
     resp['interval'] = INTERVAL
-
     if compact:
         if p4str.value:
             resp['peers'] = p4str.raw[:offset]
