@@ -24,20 +24,17 @@ def get_peer_address():
 def pi_dict(pi):
     return {'ip': pi.get('ip', None).encode('ascii'), 'port': pi.get('port', None)}
 
+def pi_pack_peer_ipv6(addr, port, buf, offset):
+    family = socket.AF_INET6
+    fmt = "!16sH"
+    struct.pack_into(fmt, buf, offset, socket.inet_pton(family, addr), port)
+    return 18
 
-def pi_pack_peer(pi, buf4, buf6, offset):
+def pi_pack_peer_ipv4(addr, port, buf, offset):
     family = socket.AF_INET
     fmt = "!4sH"
-    alen = 6
-    buf = buf4
-    if ':' in pi.get('ip', None):
-        family = socket.AF_INET6
-        fmt = "!16sH"
-        alen = 18
-        buf = buf6
-
-    struct.pack_into(fmt, buf, offset, socket.inet_pton(family, pi.get('ip', None)), int(pi.get('port', None)))
-    return alen
+    struct.pack_into(fmt, buf, offset, socket.inet_pton(family, addr), port)
+    return 6
 
 def pi_ints(pi):
     for key in ['left', 'downloaded', 'uploaded']:
@@ -189,7 +186,8 @@ def announce(rc):
     count = 0
     p4str = create_string_buffer(numwant * 6 + 1)
     p6str = create_string_buffer(numwant * 18 + 1)
-    offset = 0
+    offset_4 = 0
+    offset_6 = 0
     resp = dict()
 
     if not compact:
@@ -205,7 +203,15 @@ def announce(rc):
                 downloaded += 1
 
             if compact:
-                offset += + pi_pack_peer(ppi, p4str, p6str, offset)
+                addr = ppi.get('ip',None)
+                port = ppi.get('port',None)
+                if addr is not None and port is not None:
+                    port = int(port)
+                    if ':' in addr:
+                        offset_6 += pi_pack_peer_ipv6(addr, port, p6str, offset_6)
+                    else:
+                        offset_4 += pi_pack_peer_ipv4(addr, port, p4str, offset_4)
+                
             else:
                 resp['peers'].append(pi_dict(ppi))
     resp['complete'] = seeding
@@ -214,9 +220,9 @@ def announce(rc):
     resp['interval'] = INTERVAL
     if compact:
         if p4str.value:
-            resp['peers'] = p4str.raw[:offset]
+            resp['peers'] = p4str.raw[:offset_4]
         if p6str.value:
-            resp['peers6'] = p6str.raw[:offset]
+            resp['peers6'] = p6str.raw[:offset_6]
 
     return Response(response=bencode(resp),
                     status=200,
