@@ -22,7 +22,10 @@ def get_peer_address():
 
 
 def pi_dict(pi):
-    return {'ip': pi.get('ip', None).encode('ascii'), 'port': pi.get('port', None)}
+    return {
+        'ip': pi.get('ip', None).encode('ascii'), 'port': pi.get('port', None)
+    }
+
 
 def pi_pack_peer_ipv6(addr, port, buf, offset):
     family = socket.AF_INET6
@@ -30,17 +33,20 @@ def pi_pack_peer_ipv6(addr, port, buf, offset):
     struct.pack_into(fmt, buf, offset, socket.inet_pton(family, addr), port)
     return 18
 
+
 def pi_pack_peer_ipv4(addr, port, buf, offset):
     family = socket.AF_INET
     fmt = "!4sH"
     struct.pack_into(fmt, buf, offset, socket.inet_pton(family, addr), port)
     return 6
 
+
 def pi_ints(pi):
     for key in ['left', 'downloaded', 'uploaded']:
         if pi.get(key, None):
             pi[key] = int(pi[key])
     return(pi)
+
 
 def get_peers(rc, info_hash, numwant=0):
     peers = []
@@ -52,9 +58,9 @@ def get_peers(rc, info_hash, numwant=0):
 
         # print "start ntot=%d,nleft=%d,nseen=%d,sz=%d" % (ntot, nleft, nseen, len(peers))
         while nleft > 0 and ntot > nseen:
-            #print "ntot=%d,nleft=%d,nseen=%d,sz=%d" % (ntot, nleft, nseen, len(peers))
+            # print "ntot=%d,nleft=%d,nseen=%d,sz=%d" % (ntot, nleft, nseen, len(peers))
             for pid in rc.srandmember("peers|%s" % info_hash, nleft):
-                if not pid in seen:
+                if pid not in seen:
                     seen[pid] = True
                     nseen += 1
                     pi = rc.hgetall(pid)
@@ -86,24 +92,30 @@ def scrape_info(rc, info_hash, interval):
         seeding = 0
         for pi in get_peers(rc, info_hash):
             pi = pi_ints(pi)
-            if pi.get('state', None) == 'started' or pi.get('state', None) == 'completed':
+            if pi.get('state', None) in ['started', 'completed']:
                 count += 1
                 if pi.get('left', None) == 0:
                     seeding += 1
 
                 if pi.get('state', None) == 'completed':
                     downloaded += 1
-        print("count")
-        scrape_data = {'complete': seeding, 'downloaded': downloaded, 'incomplete': count - seeding}
+        scrape_data = {
+            'complete': seeding,
+            'downloaded': downloaded,
+            'incomplete': count - seeding
+        }
         with rc.pipeline() as p:
-            p.hmset("scrape|%s" % info_hash, scrape_data).expire("scrape|%s" % info_hash, interval).execute()
+            p.hmset(
+                "scrape|%s" % info_hash, scrape_data
+            ).expire("scrape|%s" % info_hash, interval).execute()
 
     return scrape_data
 
 
 def scrape(rc):
     """
-    The tracker scrape endpoint: https://wiki.theory.org/BitTorrentSpecification.
+    The tracker scrape endpoint:
+    https://wiki.theory.org/BitTorrentSpecification.
     """
     info_hash = get_from_qs(request.query_string, 'info_hash=')
     if info_hash is None:
@@ -114,11 +126,15 @@ def scrape(rc):
     if rc.zscore("torrents", info_hash) is None:
         abort(403)
 
-    return jsonify({'files': {info_hash: scrape_info(rc, info_hash, INTERVAL)}})
+    return jsonify(
+        {'files': {info_hash: scrape_info(rc, info_hash, INTERVAL)}}
+    )
+
 
 @async
 def _update_stats(pi, info_hash, my_pid, now):
     with db.connection().pipeline() as p:
+        pi = pi_ints(pi)
         if pi.get('left', None) == 0:
             p.zadd("torrent|%s|seeders" % info_hash, my_pid, now)
             p.zrem("torrent|%s|leechers" % info_hash, my_pid)
@@ -133,7 +149,8 @@ def _update_stats(pi, info_hash, my_pid, now):
 
 def announce(rc):
     """
-    The tracker announce endpoint: https://wiki.theory.org/BitTorrentSpecification
+    The tracker announce endpoint:
+    https://wiki.theory.org/BitTorrentSpecification
     """
     info_hash = get_from_qs(request.query_string, 'info_hash=')
     if info_hash is None:
@@ -149,7 +166,6 @@ def announce(rc):
 
     ip, port = get_peer_address()
     my_pid = "peer|%s|%s|%d" % (info_hash, ip, port)
-    print my_pid
     pi = rc.hgetall(my_pid)
     if pi is None:
         pi = dict()
@@ -180,7 +196,7 @@ def announce(rc):
 
     compact = bool(request.args.get('compact', False))
 
-    peers = dict()
+    # peers = dict()
     seeding = 0
     downloaded = 0
     count = 0
@@ -194,7 +210,7 @@ def announce(rc):
         resp['peers'] = []
 
     for ppi in get_peers(rc, info_hash, numwant):
-        if ppi.get('state', None) == 'started' or ppi.get('state', None) == 'completed':
+        if ppi.get('state', None) in ['started', 'completed']:
             count += 1
             if ppi.get('left', None) == 0:
                 seeding += 1
@@ -203,21 +219,25 @@ def announce(rc):
                 downloaded += 1
 
             if compact:
-                addr = ppi.get('ip',None)
-                port = ppi.get('port',None)
+                addr = ppi.get('ip', None)
+                port = ppi.get('port', None)
                 if addr is not None and port is not None:
                     port = int(port)
                     if ':' in addr:
-                        offset_6 += pi_pack_peer_ipv6(addr, port, p6str, offset_6)
+                        offset_6 += pi_pack_peer_ipv6(
+                            addr, port, p6str, offset_6
+                        )
                     else:
-                        offset_4 += pi_pack_peer_ipv4(addr, port, p4str, offset_4)
-                
+                        offset_4 += pi_pack_peer_ipv4(
+                            addr, port, p4str, offset_4
+                        )
             else:
                 resp['peers'].append(pi_dict(ppi))
     resp['complete'] = seeding
     resp['downloaded'] = downloaded
     resp['incomplete'] = count - seeding
     resp['interval'] = INTERVAL
+    print("Ruturning data: %s" % resp)
     if compact:
         if p4str.value:
             resp['peers'] = p4str.raw[:offset_4]
